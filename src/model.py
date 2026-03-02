@@ -1,27 +1,18 @@
 # ****************************************************************************#
 #                                                                             #
 #                                                         :::      ::::::::   #
-#    main.py                                            :+:      :+:    :+:   #
+#    model.py                                           :+:      :+:    :+:   #
 #                                                     +:+ +:+         +:+     #
 #    By: bfitte <bfitte@student.42lyon.fr>          +#+  +:+       +#+        #
 #                                                 +#+#+#+#+#+   +#+           #
-#    Created: 2026/03/02 12:44:35 by bfitte            #+#    #+#             #
-#    Updated: 2026/03/02 12:45:31 by bfitte           ###   ########lyon.fr   #
+#    Created: 2026/03/02 14:51:06 by bfitte            #+#    #+#             #
+#    Updated: 2026/03/02 14:51:07 by bfitte           ###   ########lyon.fr   #
 #                                                                             #
 # ****************************************************************************#
 
-from llm_sdk import Small_LLM_Model
-from src import TestModel
+from pydantic import BaseModel, Field
 
 
-def main() -> None:
-    # truc: Small_LLM_Model = Small_LLM_Model()
-    test: dict = {
-        "name": "Bruno",
-        "age": 12
-    }
-    test1: TestModel = TestModel(**test)
-    print(test1.name)
-
-
-main()
+class TestModel(BaseModel):
+    name: str = Field(ge=3)
+    age: int = Field(ge=18)
