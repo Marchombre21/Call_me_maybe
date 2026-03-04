@@ -8,3 +8,7 @@ wheels/
 
 # Virtual environments
 .venv
+
+#caches
+.hf_cache/
+.uv_cache/

@@ -15,11 +15,8 @@ UV := uv
 # 	@echo "  make lint-strict - Run linters and type checkers in strict mode"
 # 	@echo "  make keybind     - Show available keybinds while running the program"
 
-# install:
-# 	python3 -m venv $(VENV)
-# 	source .venv/bin/activate
-# 	$(PIP) install --upgrade pip
-# 	$(PIP) install -r requirements.txt
+install:
+	@$(UV) sync
 
 run:
 	@$(UV) run python3 -m src.main

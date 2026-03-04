@@ -10,9 +10,9 @@
 #                                                                             #
 # ****************************************************************************#
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ValidationError
 
 
 class TestModel(BaseModel):
-    name: str = Field(ge=3)
+    name: str = Field(min_length=3)
     age: int = Field(ge=18)

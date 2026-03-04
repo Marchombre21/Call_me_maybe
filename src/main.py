@@ -10,18 +10,27 @@
 #                                                                             #
 # ****************************************************************************#
 
+import json
 from llm_sdk import Small_LLM_Model
-from src import TestModel
+# from src import TestModel, ValidationError
 
 
 def main() -> None:
-    # truc: Small_LLM_Model = Small_LLM_Model()
-    test: dict = {
-        "name": "Bruno",
-        "age": 12
-    }
-    test1: TestModel = TestModel(**test)
-    print(test1.name)
+    print("Initiate model...")
+    model: Small_LLM_Model = Small_LLM_Model()
+    print("Model initiated.")
+    with open("data/input/function_calling_tests.json", "r") as f:
+        print(json.loads(f.read()))
+    # result = model.encode("Comment allez-vous?")
+    # print(result)
+    # print(model.get_logits_from_input_ids(result[0].tolist()))
+
+    # test: dict = {"name": "Bruno", "age": 19}
+    # try:
+    #     test1: TestModel = TestModel(**test)
+    #     print(test1.name)
+    # except (ValidationError) as e:
+    #     print(e)
 
 
 main()
