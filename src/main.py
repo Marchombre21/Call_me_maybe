@@ -11,6 +11,7 @@
 # ****************************************************************************#
 
 import json
+from src import FunctionCalling
 from llm_sdk import Small_LLM_Model
 # from src import TestModel, ValidationError
 
@@ -19,18 +20,26 @@ def main() -> None:
     print("Initiate model...")
     model: Small_LLM_Model = Small_LLM_Model()
     print("Model initiated.")
-    with open("data/input/function_calling_tests.json", "r") as f:
-        print(json.loads(f.read()))
-    # result = model.encode("Comment allez-vous?")
-    # print(result)
-    # print(model.get_logits_from_input_ids(result[0].tolist()))
+    path_dic: str = model.get_path_to_vocab_file()
+    caller: FunctionCalling = FunctionCalling()
+    prompts: list[str] = []
+    functions: str = ""
 
-    # test: dict = {"name": "Bruno", "age": 19}
-    # try:
-    #     test1: TestModel = TestModel(**test)
-    #     print(test1.name)
-    # except (ValidationError) as e:
-    #     print(e)
+    with open(path_dic, "r") as f:
+        caller.set_voc(json.load(f))
+    with open("data/input/functions_definition.json", "r") as f:
+        functions = json.loads(f.read())
+        caller.set_functions(json.load(f))
+    with open("data/input/function_calling_tests.json", "r") as f:
+        for ask in json.load(f):
+            for value in ask.values():
+                prompts.append(value)
+    for prompt in prompts:
+        caller.ask_llm(
+            model.encode(
+                f"User request: {prompt}. Available functions: {functions}"
+                f". Return a JSON object with the function call.").tolist()[0],
+            prompt, model)
 
 
 main()
