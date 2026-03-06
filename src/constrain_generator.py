@@ -12,6 +12,7 @@
 
 import re
 import numpy as np
+# import json
 from llm_sdk import Small_LLM_Model
 from re import Pattern
 
@@ -21,7 +22,7 @@ class FunctionCalling():
     def __init__(self):
         self.__prompt: str = '{"prompt": "'
         self.__name: str = '"name":"'
-        self.__parameters: str = '"parameters":'
+        self.__parameters: str = '"parameters":{'
         self.__final_tokens: list[int] = []
         self.__request_tokens: list[int] = []
         self.__name_authorized_token: list[int] = []
@@ -111,23 +112,28 @@ class FunctionCalling():
     def param_question(self, prompt: str, model: Small_LLM_Model) -> list[int]:
 
         if self.__step == 1:
-            functions: str = ""
+            functions: str = "{"
+            # functions: str = json.dumps(self.__functions_dict)
             for function in self.__functions_dict:
-                functions += function.get('name') + ','
+                functions += 'Name:' + function.get('name') + ' Description:'\
+                   + function.get('description') + '}'
+            # print(functions)
             tokens: list[int] = model.encode(
                 f"User request:{prompt}.Functions:{functions}."
-                "Return a JSON object with the function name.{").tolist()[0]
+                "Return a JSON object with the function call.{").tolist()[0]
 
         if self.__step == 2:
-            parameters: str = ""
+            parameters: str = "{"
             func_name: str = "".join(model.decode(self.__chosen_func))
             # print(func_name)
             func_dic: dict = [func for func in self.__functions_dict if
                               func.get('name') == func_name][0]
             for key, value in func_dic.get('parameters').items():
                 parameters += key + ':' + value.get('type') + ','
+            parameters = parameters[:-1]
+            parameters += '}'
             tokens = model.encode(
-                f"User request:{prompt}.Parameters:{parameters}."
+                f"User request:{prompt} Parameters:{parameters}."
                 "Return a JSON object with the function"
                 " parameters.{").tolist()[0]
 
@@ -137,7 +143,7 @@ class FunctionCalling():
         self.__param_authorized_tokens = []
         if self.__futurs_params[1] == 'string':
             for key, value in self.__voc.items():
-                if '"' in key and key != '"':
+                if '"' not in key or key == '"':
                     self.__param_authorized_tokens.append(value)
         if self.__futurs_params[1] == 'number':
             pattern: Pattern = re.compile(r'^[-0-9.,}]+$')
@@ -151,6 +157,7 @@ class FunctionCalling():
         tokens: list[int] = self.param_question(prompt, model)
         self._init_request(tokens, prompt, model)
         chosen_token: int = -1
+        print(prompt)
 
         if self.__step == 1:
             print("1")
@@ -164,11 +171,11 @@ class FunctionCalling():
 
         if self.__step == 2:
             print("2")
-            print(prompt)
             print("".join(model.decode(self.__chosen_func)))
             tokens = self.param_question(prompt, model)
             self._init_request(tokens, prompt, model)
             while len(self.__futurs_params) >= 4:
+                print("4 params")
                 self.init_autor_tokens()
                 while chosen_token != self.__voc.get(','):
                     logits = model.get_logits_from_input_ids(
@@ -183,12 +190,15 @@ class FunctionCalling():
                 chosen_token = self.handle_logits(logits, model)
 
             if len(self.__futurs_params) == 2:
+                print("2 params")
                 self.init_autor_tokens()
-                while chosen_token != self.__voc.get('}'):
+                while chosen_token != self.__voc.get('}') and chosen_token\
+                        != self.__voc.get('}}'):
                     logits = model.get_logits_from_input_ids(
                         self.__request_tokens)
                     chosen_token = self.handle_logits(logits, model)
                     self.add_token(chosen_token, self.__request_tokens)
+                    print(model.decode(self.__request_tokens))
                 self.add_string(',', self.__request_tokens)
                 del self.__futurs_params[0:2]
 
