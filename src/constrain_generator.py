@@ -106,8 +106,12 @@ class FunctionCalling():
                 for key, value in params.items():
                     self.__futurs_params.append(key)
                     self.__futurs_params.append(value.get('type', 'any'))
-                self.add_string('"' + self.__futurs_params[0] + '":"',
-                                self.__request_tokens)
+                if self.__futurs_params[1] == 'string':
+                    self.add_string('"' + self.__futurs_params[0] + '":"',
+                                    self.__request_tokens)
+                else:
+                    self.add_string('"' + self.__futurs_params[0] + '":',
+                                    self.__request_tokens)
 
     def param_question(self, prompt: str, model: Small_LLM_Model) -> list[int]:
 
@@ -129,7 +133,11 @@ class FunctionCalling():
             func_dic: dict = [func for func in self.__functions_dict if
                               func.get('name') == func_name][0]
             for key, value in func_dic.get('parameters').items():
-                parameters += key + ':' + value.get('type') + ','
+                # parameters += key + ':' + value.get('type') + ','
+                parameters += key + ':{'
+                for key_v, value_v in value.items():
+                    parameters += key_v + ':{' + value_v + '}}'
+                parameters += ','
             parameters = parameters[:-1]
             parameters += '}'
             tokens = model.encode(
@@ -171,10 +179,13 @@ class FunctionCalling():
 
         if self.__step == 2:
             print("2")
-            print("".join(model.decode(self.__chosen_func)))
             tokens = self.param_question(prompt, model)
             self._init_request(tokens, prompt, model)
+            logits: list[float] = model.get_logits_from_input_ids(
+                    self.__request_tokens)
+            chosen_token = self.handle_logits(logits, model)
 
+            # print(model.decode(self.__request_tokens))
             while len(self.__futurs_params) >= 4:
                 print("4 params")
                 # comma: bool = False
@@ -187,23 +198,33 @@ class FunctionCalling():
                     self.add_token(chosen_token, self.__request_tokens)
                     print(model.decode(self.__request_tokens))
                 del self.__futurs_params[0:2]
-                self.add_string('"' + self.__futurs_params[0] + '":',
-                                self.__request_tokens)
+                if self.__futurs_params[1] == 'string':
+                    self.add_string('"' + self.__futurs_params[0] + '":"',
+                                    self.__request_tokens)
+                else:
+                    self.add_string('"' + self.__futurs_params[0] + '":',
+                                    self.__request_tokens)
                 logits = model.get_logits_from_input_ids(
                         self.__request_tokens)
                 chosen_token = self.handle_logits(logits, model)
 
             if len(self.__futurs_params) == 2:
                 print("2 params")
+                if self.__futurs_params[1] == 'string':
+                    stop: str = '"'
+                else:
+                    stop = '}}'
                 self.init_autor_tokens()
-
-                while chosen_token != self.__voc.get('}') and chosen_token\
-                        != self.__voc.get('}}'):
+                # print("token choisi", chosen_token)
+                # print("token stop", self.__voc.get(stop))
+                while chosen_token != self.__voc.get(stop):
                     logits = model.get_logits_from_input_ids(
                         self.__request_tokens)
                     chosen_token = self.handle_logits(logits, model)
                     self.add_token(chosen_token, self.__request_tokens)
                     print(model.decode(self.__request_tokens))
+                if self.__futurs_params[1] == 'string':
+                    self.add_string('}', self.__request_tokens)
                 self.add_string(',', self.__request_tokens)
                 del self.__futurs_params[0:2]
 
