@@ -23,23 +23,18 @@ def main() -> None:
     path_dic: str = model.get_path_to_vocab_file()
     caller: FunctionCalling = FunctionCalling()
     prompts: list[str] = []
-    functions: str = ""
 
     with open(path_dic, "r") as f:
         caller.set_voc(json.load(f))
     with open("data/input/functions_definition.json", "r") as f:
-        functions = json.loads(f.read())
         caller.set_functions(json.load(f))
     with open("data/input/function_calling_tests.json", "r") as f:
         for ask in json.load(f):
             for value in ask.values():
                 prompts.append(value)
     for prompt in prompts:
-        caller.ask_llm(
-            model.encode(
-                f"User request: {prompt}. Available functions: {functions}"
-                f". Return a JSON object with the function call.").tolist()[0],
-            prompt, model)
+        caller.ask_llm(prompt, model)
+    print(model.decode(caller.get_answer()))
 
 
 main()

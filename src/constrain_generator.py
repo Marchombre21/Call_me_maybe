@@ -11,20 +11,20 @@
 # ****************************************************************************#
 
 import re
-import json
 import numpy as np
 from llm_sdk import Small_LLM_Model
+from re import Pattern
 
 
 class FunctionCalling():
 
     def __init__(self):
         self.__prompt: str = '{"prompt": "'
-        self.__name: str = '"name": "'
-        self.__parameters: str = '"parameters": '
+        self.__name: str = '"name":"'
+        self.__parameters: str = '"parameters":'
         self.__final_tokens: list[int] = []
         self.__request_tokens: list[int] = []
-        self.__name_authorized_id: list[int] = []
+        self.__name_authorized_token: list[int] = []
         self.__param_authorized_tokens: list[int] = []
         self.__chosen_func: list[int] = []
         self.__futurs_params: list[str] = []
@@ -43,23 +43,25 @@ class FunctionCalling():
         '$': Ensures that the match ends at the very last character of the
         evaluated string.
         """
-        pattern = re.compile(r'^[a-z_]+$')
         if isinstance(voc_dict, dict):
             self.__voc = voc_dict
             self.__final_tokens.append(self.__voc.get("["))
-            for i, token_str in enumerate(self.__voc.keys()):
-                if pattern.match(token_str):
-                    self.__name_authorized_id.append(i)
+            if len(self.__name_authorized_token) == 0:
+                pattern: Pattern = re.compile(r'^[a-z_"]+$')
+                for token_str, token_value in self.__voc.items():
+                    if pattern.match(token_str):
+                        self.__name_authorized_token.append(token_value)
 
     def set_functions(self, func_dict: dict) -> None:
-        if isinstance(func_dict, list[dict]):
+        if isinstance(func_dict, list):
             self.__functions_dict = func_dict
 
-    def init_prompt(self, tokens_list: list[int]):
+    def init_prompt(self, prompt: str):
         # Gérer avec une erreur s'il n'y a pas la lettre
         for letter in self.__prompt:
             self.__final_tokens.append(self.__voc.get(letter))
-            tokens_list.append(self.__voc.get(letter))
+        for letter in prompt + '",':
+            self.__final_tokens.append(self.__voc.get(letter))
         self.__bracket_count += 1
 
     def init_name(self, tokens_list: list[int]):
@@ -74,46 +76,127 @@ class FunctionCalling():
             self.__final_tokens.append(self.__voc.get(letter))
             tokens_list.append(self.__voc.get(letter))
 
-    def add_tokens(self, string: str, tokens_list: list[int]):
+    def add_string(self, string: str, tokens_list: list[int]):
         for letter in string:
             tokens_list.append(self.__voc.get(letter))
             self.__final_tokens.append(self.__voc.get(letter))
-            if self.__step == 1:
-                self.__chosen_func.append(self.__voc.get(letter))
 
-    def _init_request(self, tokens: list[int], prompt: str) -> None:
+    def add_token(self, token: int, tokens_list: list[int]):
+        tokens_list.append(token)
+        self.__final_tokens.append(token)
+        if self.__step == 1:
+            self.__chosen_func.append(token)
+
+    def _init_request(self, tokens: list[int], prompt: str,
+                      model: Small_LLM_Model) -> None:
+
         self.__request_tokens = tokens
-        self.init_prompt(self.__request_tokens)
-        self.add_tokens(prompt, self.__request_tokens)
+        self.init_prompt(prompt)
 
-    def ask_llm(self, tokens: list[int], prompt: str,
-                model: Small_LLM_Model) -> list[int]:
-        self._init_request(tokens, prompt)
+        if self.__step == 1:
+            self.init_name(self.__request_tokens)
+
+        if self.__step == 2:
+            self.init_parameters(self.__request_tokens)
+            params: dict | None = self.search_params_type(model)
+            if not params:
+                self.add_string('No arguments', self.__request_tokens)
+            else:
+                for key, value in params.items():
+                    self.__futurs_params.append(key)
+                    self.__futurs_params.append(value.get('type', 'any'))
+                self.add_string('"' + self.__futurs_params[0] + '":',
+                                self.__request_tokens)
+
+    def param_question(self, prompt: str, model: Small_LLM_Model) -> list[int]:
+
+        if self.__step == 1:
+            functions: str = ""
+            for function in self.__functions_dict:
+                functions += function.get('name') + ','
+            tokens: list[int] = model.encode(
+                f"User request:{prompt}.Functions:{functions}."
+                "Return a JSON object with the function name.{").tolist()[0]
+
+        if self.__step == 2:
+            parameters: str = ""
+            func_name: str = model.decode(self.__chosen_func).join()
+            func_dic: dict = [func for func in self.__functions_dict if
+                              func.get('name') == func_name][0]
+            for key, value in func_dic.get('parameters').items():
+                parameters += key + ':' + value.get('type') + ','
+            tokens = model.encode(
+                f"User request:{prompt}.Parameters:{parameters}."
+                "Return a JSON object with the function"
+                " parameters.{").tolist()[0]
+
+        return tokens
+
+    def init_autor_tokens(self):
+        self.__param_authorized_tokens = []
+        if self.__futurs_params[1] == 'string':
+            for key, value in self.__voc.items():
+                if '"' in key and key != '"':
+                    self.__param_authorized_tokens.append(value)
+        if self.__futurs_params[1] == 'number':
+            pattern: Pattern = re.compile(r'^[-0-9.,}]+$')
+            for token_str, token_value in self.__voc.items():
+                if pattern.match(token_str):
+                    self.__param_authorized_tokens.append(token_value)
+
+    def ask_llm(self, prompt: str, model: Small_LLM_Model) -> None:
+        tokens: list[int] = self.param_question(prompt, model)
+        self._init_request(tokens, prompt, model)
         logits: list[float] = model.get_logits_from_input_ids(
             self.__request_tokens)
-        while self.__bracket_count > 0:
-            self.handle_logits(logits, model)
+        chosen_token: int = -1
+
+        if self.__step == 1:
+            while chosen_token != self.__voc.get('"'):
+                chosen_token = self.handle_logits(logits, model)
+                self.add_token(chosen_token, self.__request_tokens)
+            self.add_string(',', self.__request_tokens)
+            self.__step = 2
+            self.ask_llm(prompt, model)
+
+        if self.__step == 2:
+            while len(self.__futurs_params) >= 4:
+                self.init_autor_tokens()
+                while chosen_token != self.__voc.get(','):
+                    chosen_token = self.handle_logits(logits, model)
+                    self.add_token(chosen_token, self.__request_tokens)
+                del self.__futurs_params[0:2]
+                self.add_string('"' + self.__futurs_params[0] + '":',
+                                self.__request_tokens)
+            if len(self.__futurs_params) == 2:
+                self.init_autor_tokens()
+                while chosen_token != self.__voc.get('}'):
+                    chosen_token = self.handle_logits(logits, model)
+                    self.add_token(chosen_token, self.__request_tokens)
+                self.add_string(',', self.__request_tokens)
+                del self.__futurs_params[0:2]
 
     def search_params_type(self, model: Small_LLM_Model) -> dict | None:
         func_name: str = model.decode(self.__chosen_func).join()
         return [func.get('parameters') for func in self.__functions_dict if
-        func.get('name') == func_name ][0]
+                func.get('name') == func_name][0]
 
-    def handle_logits(self, logits: list[float],
-                      model: Small_LLM_Model) -> int:
-
+    def handle_logits(self, logits: list[float], model:
+                      Small_LLM_Model) -> int:
 
         logits_np: list[float] = np.array(logits)
         mask: list[bool] = np.ones(len(logits_np), dtype=bool)
 
         if self.__step == 1:
-            mask[self.__name_authorized_id] = False
-            logits_np[mask] = -np.inf
+            mask[self.__name_authorized_token] = False
 
         if self.__step == 2:
-            params: dict = self.search_params_type(model)
-            if not params:
-                return -1
-            else:
-                for key, value in params.items():
-                    
+            mask[self.__param_authorized_tokens] = False
+
+        logits_np[mask] = -np.inf
+        return np.argmax(logits_np)
+
+    def get_answer(self) -> list[int]:
+        self.__final_tokens.pop()
+        self.__final_tokens.append(self.__voc.get("]"))
+        return self.__final_tokens
