@@ -127,12 +127,13 @@ class FunctionCalling():
                 "Return a JSON object with the function call.{").tolist()[0]
 
         if self.__step == 2:
-            parameters: str = "{"
+            # parameters: str = "{"
             func_name: str = "".join(model.decode(self.__chosen_func))
             # print(func_name)
             func_dic: dict = [func for func in self.__functions_dict if
                               func.get('name') == func_name][0]
-            parameters = json.dumps(func_dic.get('parameters'))
+            param_name: list[str] = list(func_dic.get('parameters').keys())
+            param_str: str = "{" + ", ".join(param_name) + "}"
             # for key, value in func_dic.get('parameters').items():
                 # parameters += key + ':' + value.get('type') + ','
             #     parameters += key + ':{'
@@ -141,19 +142,15 @@ class FunctionCalling():
             #     parameters += ','
             # parameters = parameters[:-1]
             # parameters += '}'
-            for value in func_dic.get('parameters').values():
-                type_v: str = value.get('type')
-            if type_v == 'string':
-                tokens = model.encode(
-                    f"User request:{prompt} Extract the parameter"
-                    f" values based on this schema:{parameters}."
-                    "Return a JSON object with the function"
-                    " parameters.{").tolist()[0]
-            else:
-                tokens = model.encode(
-                    f"User request:{prompt} Parameters:{parameters}."
-                    "Return a JSON object with the function"
-                    " parameters.{").tolist()[0]
+            tokens = model.encode(
+                f"User request:{prompt} Extract the parameter"
+                f" values: Parameters:{param_str}."
+                "Return a JSON object with the function"
+                " parameters.{").tolist()[0]
+            # tokens = model.encode(
+            #     f"User request:{prompt} Parameters:{param_str}."
+            #     "Return a JSON object with the function"
+            #     " parameters.{").tolist()[0]
 
         return tokens
 
