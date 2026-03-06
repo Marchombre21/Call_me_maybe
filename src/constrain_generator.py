@@ -92,9 +92,9 @@ class FunctionCalling():
                       model: Small_LLM_Model) -> None:
 
         self.__request_tokens = tokens
-        self.init_prompt(prompt)
 
         if self.__step == 1:
+            self.init_prompt(prompt)
             self.init_name(self.__request_tokens)
 
         if self.__step == 2:
@@ -106,7 +106,7 @@ class FunctionCalling():
                 for key, value in params.items():
                     self.__futurs_params.append(key)
                     self.__futurs_params.append(value.get('type', 'any'))
-                self.add_string('"' + self.__futurs_params[0] + '":',
+                self.add_string('"' + self.__futurs_params[0] + '":"',
                                 self.__request_tokens)
 
     def param_question(self, prompt: str, model: Small_LLM_Model) -> list[int]:
@@ -174,14 +174,18 @@ class FunctionCalling():
             print("".join(model.decode(self.__chosen_func)))
             tokens = self.param_question(prompt, model)
             self._init_request(tokens, prompt, model)
+
             while len(self.__futurs_params) >= 4:
                 print("4 params")
+                # comma: bool = False
                 self.init_autor_tokens()
+
                 while chosen_token != self.__voc.get(','):
                     logits = model.get_logits_from_input_ids(
                         self.__request_tokens)
                     chosen_token = self.handle_logits(logits, model)
                     self.add_token(chosen_token, self.__request_tokens)
+                    print(model.decode(self.__request_tokens))
                 del self.__futurs_params[0:2]
                 self.add_string('"' + self.__futurs_params[0] + '":',
                                 self.__request_tokens)
@@ -192,6 +196,7 @@ class FunctionCalling():
             if len(self.__futurs_params) == 2:
                 print("2 params")
                 self.init_autor_tokens()
+
                 while chosen_token != self.__voc.get('}') and chosen_token\
                         != self.__voc.get('}}'):
                     logits = model.get_logits_from_input_ids(
