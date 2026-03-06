@@ -84,7 +84,7 @@ class FunctionCalling():
     def add_token(self, token: int, tokens_list: list[int]):
         tokens_list.append(token)
         self.__final_tokens.append(token)
-        if self.__step == 1:
+        if self.__step == 1 and token != self.__voc.get('"'):
             self.__chosen_func.append(token)
 
     def _init_request(self, tokens: list[int], prompt: str,
@@ -120,7 +120,8 @@ class FunctionCalling():
 
         if self.__step == 2:
             parameters: str = ""
-            func_name: str = model.decode(self.__chosen_func).join()
+            func_name: str = "".join(model.decode(self.__chosen_func))
+            # print(func_name)
             func_dic: dict = [func for func in self.__functions_dict if
                               func.get('name') == func_name][0]
             for key, value in func_dic.get('parameters').items():
@@ -145,39 +146,54 @@ class FunctionCalling():
                     self.__param_authorized_tokens.append(token_value)
 
     def ask_llm(self, prompt: str, model: Small_LLM_Model) -> None:
+        self.__step = 1
+        self.__chosen_func = []
         tokens: list[int] = self.param_question(prompt, model)
         self._init_request(tokens, prompt, model)
-        logits: list[float] = model.get_logits_from_input_ids(
-            self.__request_tokens)
         chosen_token: int = -1
 
         if self.__step == 1:
+            print("1")
             while chosen_token != self.__voc.get('"'):
+                logits: list[float] = model.get_logits_from_input_ids(
+                    self.__request_tokens)
                 chosen_token = self.handle_logits(logits, model)
                 self.add_token(chosen_token, self.__request_tokens)
             self.add_string(',', self.__request_tokens)
             self.__step = 2
-            self.ask_llm(prompt, model)
 
         if self.__step == 2:
+            print("2")
+            print(prompt)
+            print("".join(model.decode(self.__chosen_func)))
+            tokens = self.param_question(prompt, model)
+            self._init_request(tokens, prompt, model)
             while len(self.__futurs_params) >= 4:
                 self.init_autor_tokens()
                 while chosen_token != self.__voc.get(','):
+                    logits = model.get_logits_from_input_ids(
+                        self.__request_tokens)
                     chosen_token = self.handle_logits(logits, model)
                     self.add_token(chosen_token, self.__request_tokens)
                 del self.__futurs_params[0:2]
                 self.add_string('"' + self.__futurs_params[0] + '":',
                                 self.__request_tokens)
+                logits = model.get_logits_from_input_ids(
+                        self.__request_tokens)
+                chosen_token = self.handle_logits(logits, model)
+
             if len(self.__futurs_params) == 2:
                 self.init_autor_tokens()
                 while chosen_token != self.__voc.get('}'):
+                    logits = model.get_logits_from_input_ids(
+                        self.__request_tokens)
                     chosen_token = self.handle_logits(logits, model)
                     self.add_token(chosen_token, self.__request_tokens)
                 self.add_string(',', self.__request_tokens)
                 del self.__futurs_params[0:2]
 
     def search_params_type(self, model: Small_LLM_Model) -> dict | None:
-        func_name: str = model.decode(self.__chosen_func).join()
+        func_name: str = "".join(model.decode(self.__chosen_func))
         return [func.get('parameters') for func in self.__functions_dict if
                 func.get('name') == func_name][0]
 
