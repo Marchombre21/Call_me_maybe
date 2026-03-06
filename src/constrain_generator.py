@@ -12,7 +12,7 @@
 
 import re
 import numpy as np
-# import json
+import json
 from llm_sdk import Small_LLM_Model
 from re import Pattern
 
@@ -132,18 +132,28 @@ class FunctionCalling():
             # print(func_name)
             func_dic: dict = [func for func in self.__functions_dict if
                               func.get('name') == func_name][0]
-            for key, value in func_dic.get('parameters').items():
+            parameters = json.dumps(func_dic.get('parameters'))
+            # for key, value in func_dic.get('parameters').items():
                 # parameters += key + ':' + value.get('type') + ','
-                parameters += key + ':{'
-                for key_v, value_v in value.items():
-                    parameters += key_v + ':{' + value_v + '}}'
-                parameters += ','
-            parameters = parameters[:-1]
-            parameters += '}'
-            tokens = model.encode(
-                f"User request:{prompt} Parameters:{parameters}."
-                "Return a JSON object with the function"
-                " parameters.{").tolist()[0]
+            #     parameters += key + ':{'
+            #     for key_v, value_v in value.items():
+            #         parameters += key_v + ':{' + value_v + '}}'
+            #     parameters += ','
+            # parameters = parameters[:-1]
+            # parameters += '}'
+            for value in func_dic.get('parameters').values():
+                type_v: str = value.get('type')
+            if type_v == 'string':
+                tokens = model.encode(
+                    f"User request:{prompt} Extract the parameter"
+                    f" values based on this schema:{parameters}."
+                    "Return a JSON object with the function"
+                    " parameters.{").tolist()[0]
+            else:
+                tokens = model.encode(
+                    f"User request:{prompt} Parameters:{parameters}."
+                    "Return a JSON object with the function"
+                    " parameters.{").tolist()[0]
 
         return tokens
 
@@ -212,12 +222,15 @@ class FunctionCalling():
                 print("2 params")
                 if self.__futurs_params[1] == 'string':
                     stop: str = '"'
+                    stop2: str = '"'
                 else:
                     stop = '}}'
+                    stop2 = '}'
                 self.init_autor_tokens()
                 # print("token choisi", chosen_token)
                 # print("token stop", self.__voc.get(stop))
-                while chosen_token != self.__voc.get(stop):
+                while chosen_token != self.__voc.get(stop) and chosen_token !=\
+                        self.__voc.get(stop2):
                     logits = model.get_logits_from_input_ids(
                         self.__request_tokens)
                     chosen_token = self.handle_logits(logits, model)
