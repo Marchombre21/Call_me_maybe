@@ -269,7 +269,7 @@ class FunctionCalling():
             mask[self.__param_authorized_tokens] = False
 
         logits_np[mask] = -np.inf
-        return np.argmax(logits_np)
+        return int(np.argmax(logits_np))
 
     def get_answer(self) -> list[int]:
         self.__final_tokens.pop()
