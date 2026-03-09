@@ -20,9 +20,9 @@ from re import Pattern
 class FunctionCalling():
 
     def __init__(self):
-        self.__prompt: str = '{"prompt": "'
+        self.__prompt: str = "{'prompt': \""
         self.__name: str = '"name":"'
-        self.__parameters: str = '"parameters":{'
+        self.__parameters: str = "'parameters':{"
         self.__final_tokens: list[int] = []
         self.__request_tokens: list[int] = []
         self.__name_authorized_token: list[int] = []
@@ -107,10 +107,10 @@ class FunctionCalling():
                     self.__futurs_params.append(key)
                     self.__futurs_params.append(value.get('type', 'any'))
                 if self.__futurs_params[1] == 'string':
-                    self.add_string('"' + self.__futurs_params[0] + '":"',
+                    self.add_string('\'' + self.__futurs_params[0] + '\':"',
                                     self.__request_tokens)
                 else:
-                    self.add_string('"' + self.__futurs_params[0] + '":',
+                    self.add_string('\'' + self.__futurs_params[0] + '\':',
                                     self.__request_tokens)
 
     def param_question(self, prompt: str, model: Small_LLM_Model) -> list[int]:
@@ -218,10 +218,10 @@ class FunctionCalling():
                     print()
                 del self.__futurs_params[0:2]
                 if self.__futurs_params[1] == 'string':
-                    self.add_string(',"' + self.__futurs_params[0] + '":"',
+                    self.add_string(',\'' + self.__futurs_params[0] + '\':"',
                                     self.__request_tokens)
                 else:
-                    self.add_string('"' + self.__futurs_params[0] + '":',
+                    self.add_string('\'' + self.__futurs_params[0] + '\':',
                                     self.__request_tokens)
                 logits = model.get_logits_from_input_ids(self.__request_tokens)
                 chosen_token = self.handle_logits(logits, model)
