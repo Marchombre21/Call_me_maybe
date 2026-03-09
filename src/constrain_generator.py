@@ -20,9 +20,9 @@ from re import Pattern
 class FunctionCalling():
 
     def __init__(self):
-        self.__prompt: str = "{'prompt': \""
+        self.__prompt: str = '{"prompt":"'
         self.__name: str = '"name":"'
-        self.__parameters: str = "'parameters':{"
+        self.__parameters: str = '"parameters":{'
         self.__final_tokens: list[int] = []
         self.__request_tokens: list[int] = []
         self.__name_authorized_token: list[int] = []
@@ -57,12 +57,21 @@ class FunctionCalling():
         if isinstance(func_dict, list):
             self.__functions_dict = func_dict
 
-    def init_prompt(self, prompt: str):
+    def init_prompt(self, prompt: str, tokens_list: list[int],
+                    model: Small_LLM_Model):
         # Gérer avec une erreur s'il n'y a pas la lettre
         for letter in self.__prompt:
             self.__final_tokens.append(self.__voc.get(letter))
-        for letter in prompt + '",':
-            self.__final_tokens.append(self.__voc.get(letter))
+            tokens_list.append(self.__voc.get(letter))
+        # prompt_lst: list[str] = (prompt + '",').split()
+        # for letter in prompt + '",':
+        #     self.__final_tokens.append(self.__voc.get(letter))
+        #     tokens_list.append(self.__voc.get(letter))
+        coded_word: list[int] = model.encode(prompt + '",').tolist()[0]
+        for code in coded_word:
+            self.__final_tokens.append(code)
+            tokens_list.append(code)
+        # print("Logits", self.__request_tokens)
         self.__bracket_count += 1
 
     def init_name(self, tokens_list: list[int]):
@@ -70,6 +79,13 @@ class FunctionCalling():
         for letter in self.__name:
             self.__final_tokens.append(self.__voc.get(letter))
             tokens_list.append(self.__voc.get(letter))
+        if len(self.__chosen_func) > 0:
+            # print("First", self.__request_tokens)
+            # print("CHosen", self.__chosen_func)
+            for token in self.__chosen_func:
+                tokens_list.append(token)
+            self.add_string('",', tokens_list)
+            # print("Second", self.__request_tokens)
 
     def init_parameters(self, tokens_list: list[int]):
         # Gérer avec une erreur s'il n'y a pas la lettre
@@ -93,11 +109,18 @@ class FunctionCalling():
 
         self.__request_tokens = tokens
 
+        # print("Logits", self.__request_tokens)
         if self.__step == 1:
-            self.init_prompt(prompt)
+            self.init_prompt(prompt, self.__request_tokens, model)
+            # print("Logits", self.__request_tokens)
             self.init_name(self.__request_tokens)
+            # print("Logits", self.__request_tokens)
 
         if self.__step == 2:
+            self.init_prompt(prompt, self.__request_tokens, model)
+            # print("First", self.__request_tokens)
+            self.init_name(self.__request_tokens)
+            # print("Second", self.__request_tokens)
             self.init_parameters(self.__request_tokens)
             params: dict | None = self.search_params_type(model)
             if not params:
@@ -107,13 +130,13 @@ class FunctionCalling():
                     self.__futurs_params.append(key)
                     self.__futurs_params.append(value.get('type', 'any'))
                 if self.__futurs_params[1] == 'string':
-                    self.add_string('\'' + self.__futurs_params[0] + '\':"',
+                    self.add_string('"' + self.__futurs_params[0] + '":"',
                                     self.__request_tokens)
                 else:
-                    self.add_string('\'' + self.__futurs_params[0] + '\':',
+                    self.add_string('"' + self.__futurs_params[0] + '":',
                                     self.__request_tokens)
 
-    def param_question(self, prompt: str, model: Small_LLM_Model) -> list[int]:
+    def param_question(self, model: Small_LLM_Model) -> list[int]:
 
         if self.__step == 1:
             functions: str = ""
@@ -123,8 +146,7 @@ class FunctionCalling():
             } for f in self.__functions_dict]
             functions = json.dumps(functions_list)
             tokens: list[int] = model.encode(
-                f"Request:{prompt}\nFunctions:({functions})\n"
-                "Return a JSON object with the function call.{").tolist()[0]
+                f"Functions:({functions})\n").tolist()[0]
 
         if self.__step == 2:
             func_name: str = "".join(model.decode(self.__chosen_func))
@@ -134,27 +156,27 @@ class FunctionCalling():
                 if func.get('name') == func_name
             ][0]
 
-            # functions_list: list = [{
+            # functions_list: dict = {
             #     "description": func_dic.get('description'),
             #     "parameters": func_dic.get('parameters')
-            # }]
+            # }
             # func_s: str = json.dumps(functions_list)
             # tokens = model.encode(
             #     f'Request:"{prompt}"\nDef function:{func_s}\n'
             #     'JSON: {').tolist()[0]
 
-            # func_desc: str = func_dic.get('description')
-            # param_names: list[str] = func_dic.get('parameters').keys()
-            # params_str: str = "'" + "', '".join(param_names) + "'"
-            # tokens = model.encode(
-            #     f'Request:"{prompt}"\nDef function:{func_desc}\n'
-            #     'Task:Provide the correct values for the parameters'
-            #     f' {params_str} to fullfill the request\n'
-            #     'JSON: {').tolist()[0]
-
+            func_desc: str = func_dic.get('description')
+            param_names: list[str] = func_dic.get('parameters').keys()
+            params_str: str = "'" + "', '".join(param_names) + "'"
             tokens = model.encode(
-                f'{prompt}\n{json.dumps(func_dic)}\n'
+                f'Description function:{func_desc}\n'
+                'Task:Provide the correct values for the parameters'
+                f' {params_str} to fullfill the prompt\n'
                 'JSON: {').tolist()[0]
+
+            # tokens = model.encode(
+            #     f'{json.dumps(func_dic)}\n'
+            #     'JSON:').tolist()[0]
 
         return tokens
 
@@ -177,10 +199,9 @@ class FunctionCalling():
     def ask_llm(self, prompt: str, model: Small_LLM_Model) -> None:
         self.__step = 1
         self.__chosen_func = []
-        tokens: list[int] = self.param_question(prompt, model)
+        tokens: list[int] = self.param_question(model)
         self._init_request(tokens, prompt, model)
         chosen_token: int = -1
-        print(prompt)
 
         if self.__step == 1:
             print("1")
@@ -194,8 +215,9 @@ class FunctionCalling():
 
         if self.__step == 2:
             print("2")
-            tokens = self.param_question(prompt, model)
+            tokens = self.param_question(model)
             self._init_request(tokens, prompt, model)
+            # print(self.__request_tokens)
             logits: list[float] = model.get_logits_from_input_ids(
                 self.__request_tokens)
             chosen_token = self.handle_logits(logits, model)
@@ -218,10 +240,10 @@ class FunctionCalling():
                     print()
                 del self.__futurs_params[0:2]
                 if self.__futurs_params[1] == 'string':
-                    self.add_string(',\'' + self.__futurs_params[0] + '\':"',
+                    self.add_string(',"' + self.__futurs_params[0] + '":"',
                                     self.__request_tokens)
                 else:
-                    self.add_string('\'' + self.__futurs_params[0] + '\':',
+                    self.add_string('"' + self.__futurs_params[0] + '":',
                                     self.__request_tokens)
                 logits = model.get_logits_from_input_ids(self.__request_tokens)
                 chosen_token = self.handle_logits(logits, model)
@@ -269,7 +291,7 @@ class FunctionCalling():
             mask[self.__param_authorized_tokens] = False
 
         logits_np[mask] = -np.inf
-        return np.argmax(logits_np)
+        return int(np.argmax(logits_np))
 
     def get_answer(self) -> list[int]:
         self.__final_tokens.pop()
