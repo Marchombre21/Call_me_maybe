@@ -117,10 +117,10 @@ class FunctionCalling():
 
         if self.__step == 1:
             functions: str = ""
-            for function in self.__functions_dict:
-                functions += 'Name:' + json.dumps(function.get('name')) +\
-                    ' Description:' + json.dumps(function.get('description')) + '\n'
-            # print(functions)
+            functions_list: list = [{"name": f.get('name'), "description":
+                                     f.get('description')} for f in
+                                    self.__functions_dict]
+            functions = json.dumps(functions_list)
             tokens: list[int] = model.encode(
                 f"Request:{prompt}\nFunctions:({functions})\n"
                 "Return a JSON object with the function call.{").tolist()[0]
@@ -142,7 +142,8 @@ class FunctionCalling():
         self.__param_authorized_tokens = []
         if self.__futurs_params[1] == 'string':
             for key, value in self.__voc.items():
-                if '"' not in key or key == '"':
+                if ('"' not in key or key == '"') and\
+                    (',' not in key or key == ','):
                     self.__param_authorized_tokens.append(value)
         if self.__futurs_params[1] == 'number':
             if len(self.__futurs_params) >= 4:
@@ -183,8 +184,12 @@ class FunctionCalling():
             while len(self.__futurs_params) >= 4:
                 print("4 params")
                 self.init_autor_tokens()
+                if self.__futurs_params[1] == 'string':
+                    stop: str = '"'
+                else:
+                    stop = ','
 
-                while chosen_token != self.__voc.get(','):
+                while chosen_token != self.__voc.get(stop):
                     logits = model.get_logits_from_input_ids(
                         self.__request_tokens)
                     chosen_token = self.handle_logits(logits, model)
@@ -192,7 +197,7 @@ class FunctionCalling():
                     print(model.decode(self.__request_tokens))
                 del self.__futurs_params[0:2]
                 if self.__futurs_params[1] == 'string':
-                    self.add_string('"' + self.__futurs_params[0] + '":"',
+                    self.add_string(',"' + self.__futurs_params[0] + '":"',
                                     self.__request_tokens)
                 else:
                     self.add_string('"' + self.__futurs_params[0] + '":',
