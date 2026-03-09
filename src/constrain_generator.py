@@ -20,9 +20,9 @@ from re import Pattern
 class FunctionCalling():
 
     def __init__(self):
-        self.__prompt: str = "{'prompt': \""
+        self.__prompt: str = '{"prompt": "'
         self.__name: str = '"name":"'
-        self.__parameters: str = "'parameters':{"
+        self.__parameters: str = '"parameters":{'
         self.__final_tokens: list[int] = []
         self.__request_tokens: list[int] = []
         self.__name_authorized_token: list[int] = []
@@ -57,12 +57,13 @@ class FunctionCalling():
         if isinstance(func_dict, list):
             self.__functions_dict = func_dict
 
-    def init_prompt(self, prompt: str):
+    def init_prompt(self, prompt: str, model: Small_LLM_Model):
         # Gérer avec une erreur s'il n'y a pas la lettre
         for letter in self.__prompt:
             self.__final_tokens.append(self.__voc.get(letter))
-        for letter in prompt + '",':
-            self.__final_tokens.append(self.__voc.get(letter))
+        coded_word: list[int] = model.encode(prompt + '",').tolist()[0]
+        for code in coded_word:
+            self.__final_tokens.append(code)
         self.__bracket_count += 1
 
     def init_name(self, tokens_list: list[int]):
@@ -94,7 +95,7 @@ class FunctionCalling():
         self.__request_tokens = tokens
 
         if self.__step == 1:
-            self.init_prompt(prompt)
+            self.init_prompt(prompt, model)
             self.init_name(self.__request_tokens)
 
         if self.__step == 2:
@@ -107,10 +108,10 @@ class FunctionCalling():
                     self.__futurs_params.append(key)
                     self.__futurs_params.append(value.get('type', 'any'))
                 if self.__futurs_params[1] == 'string':
-                    self.add_string('\'' + self.__futurs_params[0] + '\':"',
+                    self.add_string('"' + self.__futurs_params[0] + '":"',
                                     self.__request_tokens)
                 else:
-                    self.add_string('\'' + self.__futurs_params[0] + '\':',
+                    self.add_string('"' + self.__futurs_params[0] + '":',
                                     self.__request_tokens)
 
     def param_question(self, prompt: str, model: Small_LLM_Model) -> list[int]:
@@ -218,10 +219,10 @@ class FunctionCalling():
                     print()
                 del self.__futurs_params[0:2]
                 if self.__futurs_params[1] == 'string':
-                    self.add_string(',\'' + self.__futurs_params[0] + '\':"',
+                    self.add_string(',"' + self.__futurs_params[0] + '":"',
                                     self.__request_tokens)
                 else:
-                    self.add_string('\'' + self.__futurs_params[0] + '\':',
+                    self.add_string('"' + self.__futurs_params[0] + '":',
                                     self.__request_tokens)
                 logits = model.get_logits_from_input_ids(self.__request_tokens)
                 chosen_token = self.handle_logits(logits, model)
