@@ -107,18 +107,18 @@ class FunctionCalling():
     def _init_request(self, tokens: list[int], prompt: str,
                       model: Small_LLM_Model) -> None:
 
+        self.__request_tokens = tokens
         # print("Logits", self.__request_tokens)
         if self.__step == 1:
-            self.__request_tokens = tokens
             self.init_prompt(prompt, self.__request_tokens, model)
             # print("Logits", self.__request_tokens)
             self.init_name(self.__request_tokens)
             # print("Logits", self.__request_tokens)
 
         if self.__step == 2:
-            # self.init_prompt(prompt, self.__request_tokens, model)
-            # # print("First", self.__request_tokens)
-            # self.init_name(self.__request_tokens)
+            self.init_prompt(prompt, self.__request_tokens, model)
+            # print("First", self.__request_tokens)
+            self.init_name(self.__request_tokens)
             # print("Second", self.__request_tokens)
             self.init_parameters(self.__request_tokens)
             params: dict | None = self.search_params_type(model)
@@ -142,34 +142,42 @@ class FunctionCalling():
             tokens: list[int] = model.encode(
                 f"Functions:({functions})\nJSON:").tolist()[0]
 
-        # if self.__step == 2:
-        #     func_name: str = "".join(model.decode(self.__chosen_func))
-        #     func_dic: dict = [
-        #         func for func in self.__functions_dict
-        #         if func.get('name') == func_name
-        #     ][0]
+        if self.__step == 2:
+            func_name: str = "".join(model.decode(self.__chosen_func))
+            func_dic: dict = [
+                func for func in self.__functions_dict
+                if func.get('name') == func_name
+            ][0]
 
-        #     # functions_list: dict = {
-        #     #     "description": func_dic.get('description'),
-        #     #     "parameters": func_dic.get('parameters')
-        #     # }
-        #     # func_s: str = json.dumps(functions_list)
-        #     # tokens = model.encode(
-        #     #     f'Request:"{prompt}"\nDef function:{func_s}\n'
-        #     #     'JSON: {').tolist()[0]
+            # functions_list: dict = {
+            #     "description": func_dic.get('description'),
+            #     "parameters": func_dic.get('parameters')
+            # }
+            # func_s: str = json.dumps(functions_list)
+            # tokens = model.encode(
+            #     f'Request:"{prompt}"\nDef function:{func_s}\n'
+            #     'JSON: {').tolist()[0]
 
-        #     # func_desc: str = func_dic.get('description')
-        #     # param_names: list[str] = func_dic.get('parameters').keys()
-        #     # params_str: str = "'" + "', '".join(param_names) + "'"
-        #     # tokens = model.encode(
-        #     #     f'Prompt:{prompt}\nDescription function:{func_desc}\n'
-        #     #     'Task:Provide the correct values for the parameters'
-        #     #     f' {params_str} to fullfill the prompt\n'
-        #     #     'JSON:').tolist()[0]
+            # func_desc: str = func_dic.get('description')
+            # param_names: list[str] = func_dic.get('parameters').keys()
+            # params_str: str = "'" + "', '".join(param_names) + "'"
+            # tokens = model.encode(
+            #     f'Prompt:{prompt}\nDescription function:{func_desc}\n'
+            #     'Task:Provide the correct values for the parameters'
+            #     f' {params_str} to fullfill the prompt\n'
+            #     'JSON:').tolist()[0]
 
-        #     tokens = model.encode(
-        #         f'{json.dumps(func_dic)}\n'
-        #         'JSON:').tolist()[0]
+            # functions_list: dict = {
+            #     "name": func_dic.get('name'),
+            #     "description": func_dic.get('description'),
+            #     "parameters": ', '.join(func_dic.get('parameters').keys())
+            # }
+            # tokens = model.encode(
+            #     f'{json.dumps(functions_list)}\n'
+            #     'JSON:').tolist()[0]
+            tokens = model.encode(
+                f'{json.dumps(func_dic)}\n'
+                'JSON:').tolist()[0]
 
         return tokens
 
@@ -208,7 +216,7 @@ class FunctionCalling():
 
         if self.__step == 2:
             print("2")
-            # tokens = self.param_question(prompt, model)
+            tokens = self.param_question(model)
             self._init_request(tokens, prompt, model)
             # print(self.__request_tokens)
             logits: list[float] = model.get_logits_from_input_ids(
@@ -284,8 +292,8 @@ class FunctionCalling():
             mask[self.__param_authorized_tokens] = False
 
         logits_np[mask] = -np.inf
-        print("truc", logits_np[self.__voc.get('"')])
-        print("truc2", logits_np[int(np.argmax(logits_np))])
+        # print("truc", logits_np[self.__voc.get('"')])
+        # print("truc2", logits_np[int(np.argmax(logits_np))])
         return int(np.argmax(logits_np))
 
     def get_answer(self) -> list[int]:
