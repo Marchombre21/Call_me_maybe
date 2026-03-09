@@ -163,8 +163,7 @@ class FunctionCalling():
         self.__param_authorized_tokens = []
         if self.__futurs_params[1] == 'string':
             for key, value in self.__voc.items():
-                if ('"' not in key or key == '"') and\
-                        (',' not in key or key == ','):
+                if (',' not in key or key == ','):
                     self.__param_authorized_tokens.append(value)
         if self.__futurs_params[1] == 'number':
             if len(self.__futurs_params) >= 4:
@@ -206,11 +205,11 @@ class FunctionCalling():
                 print("4 params")
                 self.init_autor_tokens()
                 if self.__futurs_params[1] == 'string':
-                    stop: str = self.__voc.get('"')
+                    stop: str = '"'
                 else:
-                    stop = self.__voc.get(',')
+                    stop = ','
 
-                while chosen_token != stop:
+                while stop not in [key for key, value in self.__voc. items() if value == chosen_token]:
                     logits = model.get_logits_from_input_ids(
                         self.__request_tokens)
                     chosen_token = self.handle_logits(logits, model)
@@ -229,16 +228,15 @@ class FunctionCalling():
 
             if len(self.__futurs_params) == 2:
                 print("2 params")
-                if self.__futurs_params[1] == 'string':
-                    stop: str = self.__voc.get('"')
-                    stop2: str = stop
-                else:
-                    stop = self.__voc.get('}}')
-                    stop2 = self.__voc.get('}')
                 self.init_autor_tokens()
                 # print("token choisi", chosen_token)
                 # print("token stop", self.__voc.get(stop))
-                while chosen_token != stop and chosen_token != stop2:
+                if self.__futurs_params[1] == 'string':
+                    stop: str = '"'
+                else:
+                    stop = '}'
+
+                while stop not in [key for key, value in self.__voc. items() if value == chosen_token]:
                     logits = model.get_logits_from_input_ids(
                         self.__request_tokens)
                     chosen_token = self.handle_logits(logits, model)
