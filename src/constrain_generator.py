@@ -107,7 +107,6 @@ class FunctionCalling():
     def _init_request(self, tokens: list[int], prompt: str,
                       model: Small_LLM_Model) -> None:
 
-
         # print("Logits", self.__request_tokens)
         if self.__step == 1:
             self.__request_tokens = tokens
@@ -285,8 +284,8 @@ class FunctionCalling():
             mask[self.__param_authorized_tokens] = False
 
         logits_np[mask] = -np.inf
-        # print("truc", logits_np[self.__voc.get('"')])
-        # print("truc2", logits_np[int(np.argmax(logits_np))])
+        print("truc", logits_np[self.__voc.get('"')])
+        print("truc2", logits_np[int(np.argmax(logits_np))])
         return int(np.argmax(logits_np))
 
     def get_answer(self) -> list[int]:
