@@ -116,41 +116,25 @@ class FunctionCalling():
     def param_question(self, prompt: str, model: Small_LLM_Model) -> list[int]:
 
         if self.__step == 1:
-            functions: str = "{"
-            # functions: str = json.dumps(self.__functions_dict)
+            functions: str = ""
             for function in self.__functions_dict:
-                functions += 'Name:' + function.get('name') + ' Description:'\
-                   + function.get('description') + '}'
+                functions += 'Name:' + json.dumps(function.get('name')) +\
+                    ' Description:' + json.dumps(function.get('description')) + '\n'
             # print(functions)
             tokens: list[int] = model.encode(
-                f"User request:{prompt}.Functions:{functions}."
+                f"Request:{prompt}\nFunctions:({functions})\n"
                 "Return a JSON object with the function call.{").tolist()[0]
 
         if self.__step == 2:
-            # parameters: str = "{"
             func_name: str = "".join(model.decode(self.__chosen_func))
             # print(func_name)
             func_dic: dict = [func for func in self.__functions_dict if
                               func.get('name') == func_name][0]
-            param_name: list[str] = list(func_dic.get('parameters').keys())
-            param_str: str = "{" + ", ".join(param_name) + "}"
-            # for key, value in func_dic.get('parameters').items():
-                # parameters += key + ':' + value.get('type') + ','
-            #     parameters += key + ':{'
-            #     for key_v, value_v in value.items():
-            #         parameters += key_v + ':{' + value_v + '}}'
-            #     parameters += ','
-            # parameters = parameters[:-1]
-            # parameters += '}'
+            func_s = json.dumps(func_dic.get('description')) + ' ' +\
+                json.dumps(func_dic.get('parameters'))
             tokens = model.encode(
-                f"User request:{prompt} Extract the parameter"
-                f" values: Parameters:{param_str}."
-                "Return a JSON object with the function"
-                " parameters.{").tolist()[0]
-            # tokens = model.encode(
-            #     f"User request:{prompt} Parameters:{param_str}."
-            #     "Return a JSON object with the function"
-            #     " parameters.{").tolist()[0]
+                f'Request:"{prompt}"\nDef function:{func_s}\n'
+                'JSON: {').tolist()[0]
 
         return tokens
 
@@ -161,7 +145,10 @@ class FunctionCalling():
                 if '"' not in key or key == '"':
                     self.__param_authorized_tokens.append(value)
         if self.__futurs_params[1] == 'number':
-            pattern: Pattern = re.compile(r'^[-0-9.,}]+$')
+            if len(self.__futurs_params) >= 4:
+                pattern: Pattern = re.compile(r'^([-0-9.,]+|}}|})$')
+            else:
+                pattern = re.compile(r'^([-0-9.]+|}}|})$')
             for token_str, token_value in self.__voc.items():
                 if pattern.match(token_str):
                     self.__param_authorized_tokens.append(token_value)
@@ -195,7 +182,6 @@ class FunctionCalling():
             # print(model.decode(self.__request_tokens))
             while len(self.__futurs_params) >= 4:
                 print("4 params")
-                # comma: bool = False
                 self.init_autor_tokens()
 
                 while chosen_token != self.__voc.get(','):
