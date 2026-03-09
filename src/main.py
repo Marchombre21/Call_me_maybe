@@ -31,7 +31,7 @@ def main() -> None:
     with open("data/input/function_calling_tests.json", "r") as f:
         for ask in json.load(f):
             for value in ask.values():
-                prompts.append(value)
+                prompts.append(value.replace('"', "'"))
     for i, prompt in enumerate(prompts):
         # print(f"appel {i + 1}")
         caller.ask_llm(prompt, model)

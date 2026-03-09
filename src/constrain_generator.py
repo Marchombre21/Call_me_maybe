@@ -135,7 +135,7 @@ class FunctionCalling():
             ][0]
             func_desc: str = func_dic.get('description')
             param_names: list[str] = func_dic.get('parameters').keys()
-            params_str: str = ', '.join(param_names)
+            params_str: str = "'" + "', '".join(param_names) + "'"
             # functions_list: list = [{
             #     "description": func_dic.get('description'),
             #     "parameters": func_dic.get('parameters')
@@ -196,11 +196,11 @@ class FunctionCalling():
                 print("4 params")
                 self.init_autor_tokens()
                 if self.__futurs_params[1] == 'string':
-                    stop: str = '"'
+                    stop: str = self.__voc.get('"')
                 else:
-                    stop = ','
+                    stop = self.__voc.get(',')
 
-                while chosen_token != self.__voc.get(stop):
+                while chosen_token != stop:
                     logits = model.get_logits_from_input_ids(
                         self.__request_tokens)
                     chosen_token = self.handle_logits(logits, model)
@@ -219,16 +219,15 @@ class FunctionCalling():
             if len(self.__futurs_params) == 2:
                 print("2 params")
                 if self.__futurs_params[1] == 'string':
-                    stop: str = '"'
-                    stop2: str = '"'
+                    stop: str = self.__voc.get('"')
+                    stop2: str = stop
                 else:
-                    stop = '}}'
-                    stop2 = '}'
+                    stop = self.__voc.get('}}')
+                    stop2 = self.__voc.get('}')
                 self.init_autor_tokens()
                 # print("token choisi", chosen_token)
                 # print("token stop", self.__voc.get(stop))
-                while chosen_token != self.__voc.get(stop) and chosen_token !=\
-                        self.__voc.get(stop2):
+                while chosen_token != stop and chosen_token != stop2:
                     logits = model.get_logits_from_input_ids(
                         self.__request_tokens)
                     chosen_token = self.handle_logits(logits, model)
