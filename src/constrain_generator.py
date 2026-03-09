@@ -154,7 +154,7 @@ class FunctionCalling():
             #     'JSON: {').tolist()[0]
 
             tokens = model.encode(
-                f'{prompt}\n{json.dumps(func_dic)}\n'
+                f'Task:{prompt}\n{json.dumps(func_dic)}\n'
                 'JSON: {').tolist()[0]
 
         return tokens
