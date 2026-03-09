@@ -136,7 +136,7 @@ class FunctionCalling():
                     self.add_string('"' + self.__futurs_params[0] + '":',
                                     self.__request_tokens)
 
-    def param_question(self, model: Small_LLM_Model) -> list[int]:
+    def param_question(self, prompt:str, model: Small_LLM_Model) -> list[int]:
 
         if self.__step == 1:
             functions: str = ""
@@ -150,7 +150,6 @@ class FunctionCalling():
 
         if self.__step == 2:
             func_name: str = "".join(model.decode(self.__chosen_func))
-            # print(func_name)
             func_dic: dict = [
                 func for func in self.__functions_dict
                 if func.get('name') == func_name
@@ -165,18 +164,18 @@ class FunctionCalling():
             #     f'Request:"{prompt}"\nDef function:{func_s}\n'
             #     'JSON: {').tolist()[0]
 
-            func_desc: str = func_dic.get('description')
-            param_names: list[str] = func_dic.get('parameters').keys()
-            params_str: str = "'" + "', '".join(param_names) + "'"
-            tokens = model.encode(
-                f'Description function:{func_desc}\n'
-                'Task:Provide the correct values for the parameters'
-                f' {params_str} to fullfill the prompt\n'
-                'JSON: {').tolist()[0]
-
+            # func_desc: str = func_dic.get('description')
+            # param_names: list[str] = func_dic.get('parameters').keys()
+            # params_str: str = "'" + "', '".join(param_names) + "'"
             # tokens = model.encode(
-            #     f'{json.dumps(func_dic)}\n'
+            #     f'Prompt:{prompt}\nDescription function:{func_desc}\n'
+            #     'Task:Provide the correct values for the parameters'
+            #     f' {params_str} to fullfill the prompt\n'
             #     'JSON:').tolist()[0]
+
+            tokens = model.encode(
+                f'Prompt:{prompt}\n{json.dumps(func_dic)}\n'
+                'JSON:').tolist()[0]
 
         return tokens
 
@@ -199,7 +198,7 @@ class FunctionCalling():
     def ask_llm(self, prompt: str, model: Small_LLM_Model) -> None:
         self.__step = 1
         self.__chosen_func = []
-        tokens: list[int] = self.param_question(model)
+        tokens: list[int] = self.param_question(prompt, model)
         self._init_request(tokens, prompt, model)
         chosen_token: int = -1
 
@@ -215,7 +214,7 @@ class FunctionCalling():
 
         if self.__step == 2:
             print("2")
-            tokens = self.param_question(model)
+            tokens = self.param_question(prompt, model)
             self._init_request(tokens, prompt, model)
             # print(self.__request_tokens)
             logits: list[float] = model.get_logits_from_input_ids(
@@ -291,6 +290,8 @@ class FunctionCalling():
             mask[self.__param_authorized_tokens] = False
 
         logits_np[mask] = -np.inf
+        # print("truc", logits_np[self.__voc.get('"')])
+        # print("truc2", logits_np[int(np.argmax(logits_np))])
         return int(np.argmax(logits_np))
 
     def get_answer(self) -> list[int]:
