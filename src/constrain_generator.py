@@ -117,9 +117,10 @@ class FunctionCalling():
 
         if self.__step == 1:
             functions: str = ""
-            functions_list: list = [{"name": f.get('name'), "description":
-                                     f.get('description')} for f in
-                                    self.__functions_dict]
+            functions_list: list = [{
+                "name": f.get('name'),
+                "description": f.get('description')
+            } for f in self.__functions_dict]
             functions = json.dumps(functions_list)
             tokens: list[int] = model.encode(
                 f"Request:{prompt}\nFunctions:({functions})\n"
@@ -128,12 +129,22 @@ class FunctionCalling():
         if self.__step == 2:
             func_name: str = "".join(model.decode(self.__chosen_func))
             # print(func_name)
-            func_dic: dict = [func for func in self.__functions_dict if
-                              func.get('name') == func_name][0]
-            func_s = json.dumps(func_dic.get('description')) + ' ' +\
-                json.dumps(func_dic.get('parameters'))
+            func_dic: dict = [
+                func for func in self.__functions_dict
+                if func.get('name') == func_name
+            ][0]
+            func_desc: str = func_dic.get('description')
+            param_names: list[str] = func_dic.get('parameters').keys()
+            params_str: str = ', '.join(param_names)
+            # functions_list: list = [{
+            #     "description": func_dic.get('description'),
+            #     "parameters": func_dic.get('parameters')
+            # }]
+            # func_s: str = json.dumps(functions_list)
             tokens = model.encode(
-                f'Request:"{prompt}"\nDef function:{func_s}\n'
+                f'Request:"{prompt}"\nDef function:{func_desc}\n'
+                'Task:Provide the correct values for the parameters'
+                f' {params_str} to fullfill the request\n'
                 'JSON: {').tolist()[0]
 
         return tokens
@@ -143,7 +154,7 @@ class FunctionCalling():
         if self.__futurs_params[1] == 'string':
             for key, value in self.__voc.items():
                 if ('"' not in key or key == '"') and\
-                    (',' not in key or key == ','):
+                        (',' not in key or key == ','):
                     self.__param_authorized_tokens.append(value)
         if self.__futurs_params[1] == 'number':
             if len(self.__futurs_params) >= 4:
@@ -177,7 +188,7 @@ class FunctionCalling():
             tokens = self.param_question(prompt, model)
             self._init_request(tokens, prompt, model)
             logits: list[float] = model.get_logits_from_input_ids(
-                    self.__request_tokens)
+                self.__request_tokens)
             chosen_token = self.handle_logits(logits, model)
 
             # print(model.decode(self.__request_tokens))
@@ -202,8 +213,7 @@ class FunctionCalling():
                 else:
                     self.add_string('"' + self.__futurs_params[0] + '":',
                                     self.__request_tokens)
-                logits = model.get_logits_from_input_ids(
-                        self.__request_tokens)
+                logits = model.get_logits_from_input_ids(self.__request_tokens)
                 chosen_token = self.handle_logits(logits, model)
 
             if len(self.__futurs_params) == 2:
@@ -231,11 +241,13 @@ class FunctionCalling():
 
     def search_params_type(self, model: Small_LLM_Model) -> dict | None:
         func_name: str = "".join(model.decode(self.__chosen_func))
-        return [func.get('parameters') for func in self.__functions_dict if
-                func.get('name') == func_name][0]
+        return [
+            func.get('parameters') for func in self.__functions_dict
+            if func.get('name') == func_name
+        ][0]
 
-    def handle_logits(self, logits: list[float], model:
-                      Small_LLM_Model) -> int:
+    def handle_logits(self, logits: list[float],
+                      model: Small_LLM_Model) -> int:
 
         logits_np: list[float] = np.array(logits)
         mask: list[bool] = np.ones(len(logits_np), dtype=bool)
