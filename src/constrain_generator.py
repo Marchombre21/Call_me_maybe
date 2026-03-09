@@ -133,18 +133,27 @@ class FunctionCalling():
                 func for func in self.__functions_dict
                 if func.get('name') == func_name
             ][0]
-            func_desc: str = func_dic.get('description')
-            param_names: list[str] = func_dic.get('parameters').keys()
-            params_str: str = "'" + "', '".join(param_names) + "'"
+
             # functions_list: list = [{
             #     "description": func_dic.get('description'),
             #     "parameters": func_dic.get('parameters')
             # }]
             # func_s: str = json.dumps(functions_list)
+            # tokens = model.encode(
+            #     f'Request:"{prompt}"\nDef function:{func_s}\n'
+            #     'JSON: {').tolist()[0]
+
+            # func_desc: str = func_dic.get('description')
+            # param_names: list[str] = func_dic.get('parameters').keys()
+            # params_str: str = "'" + "', '".join(param_names) + "'"
+            # tokens = model.encode(
+            #     f'Request:"{prompt}"\nDef function:{func_desc}\n'
+            #     'Task:Provide the correct values for the parameters'
+            #     f' {params_str} to fullfill the request\n'
+            #     'JSON: {').tolist()[0]
+
             tokens = model.encode(
-                f'Request:"{prompt}"\nDef function:{func_desc}\n'
-                'Task:Provide the correct values for the parameters'
-                f' {params_str} to fullfill the request\n'
+                f'{prompt}\n{json.dumps(func_dic)}\n'
                 'JSON: {').tolist()[0]
 
         return tokens
@@ -206,6 +215,7 @@ class FunctionCalling():
                     chosen_token = self.handle_logits(logits, model)
                     self.add_token(chosen_token, self.__request_tokens)
                     print(model.decode(self.__request_tokens))
+                    print()
                 del self.__futurs_params[0:2]
                 if self.__futurs_params[1] == 'string':
                     self.add_string(',"' + self.__futurs_params[0] + '":"',
@@ -233,6 +243,7 @@ class FunctionCalling():
                     chosen_token = self.handle_logits(logits, model)
                     self.add_token(chosen_token, self.__request_tokens)
                     print(model.decode(self.__request_tokens))
+                    print()
                 if self.__futurs_params[1] == 'string':
                     self.add_string('}', self.__request_tokens)
                 self.add_string(',', self.__request_tokens)
