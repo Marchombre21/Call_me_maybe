@@ -33,9 +33,9 @@ def main() -> None:
             for value in ask.values():
                 prompts.append(value)
     for i, prompt in enumerate(prompts):
-        # print(f"appel {i + 1}")
         caller.ask_llm(prompt, model)
-    print(model.decode(caller.get_answer()))
+    with open("data/output/function_calls.json", 'w') as f:
+        json.dump(caller.get_answer(), f, indent=2)
 
 
 main()
