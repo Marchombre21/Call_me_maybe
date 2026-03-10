@@ -15,6 +15,7 @@ import numpy as np
 import json
 from llm_sdk import Small_LLM_Model
 from re import Pattern
+from .utils import value_by_token, check_last_token
 
 
 class FunctionCalling():
@@ -141,7 +142,7 @@ class FunctionCalling():
     def init_autor_tokens(self):
         self.__param_authorized_tokens = []
         if self.__futurs_params[1] == 'string':
-            for value in self.__voc.items():
+            for value in self.__voc.values():
                 self.__param_authorized_tokens.append(value)
         if self.__futurs_params[1] == 'number':
             if len(self.__futurs_params) >= 4:
@@ -157,15 +158,16 @@ class FunctionCalling():
         self.__chosen_func = []
         tokens: list[int] = self.param_question(prompt, model)
         self._init_request(tokens, prompt, model)
-        chosen_token: int = -1
+        chosen_token: int = 12
         print(prompt)
 
         if self.__step == 1:
             print("1")
-            while chosen_token != self.__voc.get('"'):
+            while '"' not in value_by_token(chosen_token, self.__voc):
                 logits: list[float] = model.get_logits_from_input_ids(
                     self.__request_tokens)
                 chosen_token = self.handle_logits(logits, model)
+                # print(value_by_token(chosen_token, self.__voc))
                 self.add_token(chosen_token, self.__request_tokens)
             self.add_string(',', self.__request_tokens)
             self.__step = 2
@@ -187,12 +189,13 @@ class FunctionCalling():
                 else:
                     stop = ','
 
-                while chosen_token != self.__voc.get(stop):
+                while stop not in value_by_token(chosen_token, self.__voc):
                     logits = model.get_logits_from_input_ids(
                         self.__request_tokens)
                     chosen_token = self.handle_logits(logits, model)
                     self.add_token(chosen_token, self.__request_tokens)
                     print(model.decode(self.__request_tokens))
+                    print()
                 del self.__futurs_params[0:2]
                 if self.__futurs_params[1] == 'string':
                     self.add_string(',"' + self.__futurs_params[0] + '":"',
@@ -208,20 +211,22 @@ class FunctionCalling():
                 print("2 params")
                 if self.__futurs_params[1] == 'string':
                     stop: str = '"'
-                    stop2: str = '"'
                 else:
-                    stop = '}}'
-                    stop2 = '}'
+                    stop = '}'
                 self.init_autor_tokens()
                 # print("token choisi", chosen_token)
                 # print("token stop", self.__voc.get(stop))
-                while chosen_token != self.__voc.get(stop) and chosen_token !=\
-                        self.__voc.get(stop2):
+                while stop not in value_by_token(chosen_token, self.__voc):
                     logits = model.get_logits_from_input_ids(
                         self.__request_tokens)
                     chosen_token = self.handle_logits(logits, model)
                     self.add_token(chosen_token, self.__request_tokens)
                     print(model.decode(self.__request_tokens))
+                print("Last token", value_by_token(chosen_token, self.__voc))
+                self.__request_tokens[len(self.__request_tokens) - 1] =\
+                    check_last_token(
+                    self.__futurs_params[1], chosen_token, self.__voc)
+                print("New", model.decode(self.__request_tokens))
                 if self.__futurs_params[1] == 'string':
                     self.add_string('}', self.__request_tokens)
                 self.add_string(',', self.__request_tokens)
