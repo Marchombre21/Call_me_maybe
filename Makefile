@@ -19,10 +19,13 @@ install:
 	@$(UV) sync
 
 run:
-	@$(UV) run python3 -m src.main
+	@$(UV) run python3 -m src\
+	--functions_definition data/input/functions_definition.json\
+	--input data/input/function_calling_tests.json\
+	--output data/output/function_calls.json
 
 debug:
-	$(PYTHON) -m pdb a_maze_ing.py
+	$(PYTHON) -m pdb src.call_me_maybe
 
 test:
 	$(PYTHON) -m pytest -v
