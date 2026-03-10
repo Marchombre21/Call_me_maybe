@@ -131,10 +131,23 @@ class FunctionCalling():
             # print(func_name)
             func_dic: dict = [func for func in self.__functions_dict if
                               func.get('name') == func_name][0]
-            func_s = json.dumps(func_dic.get('description')) + ' ' +\
-                json.dumps(func_dic.get('parameters'))
+            # func_s = json.dumps(func_dic.get('description')) + ' ' +\
+            #     json.dumps(func_dic.get('parameters'))
+            # tokens = model.encode(
+            #     f'Request:"{prompt}"\nDef function:{func_s}\n'
+            #     'JSON: {').tolist()[0]
+
+            # func_desc: str = func_dic.get('description')
+            # param_names: list[str] = func_dic.get('parameters').keys()
+            # params_str: str = "'" + "', '".join(param_names) + "'"
+            # tokens = model.encode(
+            #     f'Request:"{prompt}"\nDef function:{func_desc}\n'
+            #     'Task:Provide the correct values for the parameters'
+            #     f' {params_str} to fullfill the request\n'
+            #     'JSON: {').tolist()[0]
+
             tokens = model.encode(
-                f'Request:"{prompt}"\nDef function:{func_s}\n'
+                f'Task:{prompt}\n{json.dumps(func_dic)}\n'
                 'JSON: {').tolist()[0]
 
         return tokens
@@ -198,7 +211,7 @@ class FunctionCalling():
                     print()
                 del self.__futurs_params[0:2]
                 if self.__futurs_params[1] == 'string':
-                    self.add_string(',"' + self.__futurs_params[0] + '":"',
+                    self.add_string('"' + self.__futurs_params[0] + '":"',
                                     self.__request_tokens)
                 else:
                     self.add_string('"' + self.__futurs_params[0] + '":',
@@ -222,11 +235,11 @@ class FunctionCalling():
                     chosen_token = self.handle_logits(logits, model)
                     self.add_token(chosen_token, self.__request_tokens)
                     print(model.decode(self.__request_tokens))
-                print("Last token", value_by_token(chosen_token, self.__voc))
+                # print("Last token", value_by_token(chosen_token, self.__voc))
                 self.__request_tokens[len(self.__request_tokens) - 1] =\
                     check_last_token(
                     self.__futurs_params[1], chosen_token, self.__voc)
-                print("New", model.decode(self.__request_tokens))
+                print(model.decode(self.__request_tokens))
                 if self.__futurs_params[1] == 'string':
                     self.add_string('}', self.__request_tokens)
                 self.add_string(',', self.__request_tokens)
