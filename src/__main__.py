@@ -14,6 +14,7 @@ import json
 from argparse import ArgumentParser, Namespace
 from src import FunctionCalling
 from llm_sdk import Small_LLM_Model
+from .errors import FileError, JSONError
 # from src import TestModel, ValidationError
 
 
@@ -41,19 +42,37 @@ def main() -> None:
     caller: FunctionCalling = FunctionCalling()
     prompts: list[str] = []
 
-    with open(path_dic, "r") as f:
-        caller.set_voc(json.load(f))
-    with open(path_func_def, "r") as f:
-        caller.set_functions(json.load(f))
-    with open(path_prompts, "r") as f:
-        for ask in json.load(f):
-            for value in ask.values():
-                prompts.append(value)
+    try:
+        with open(path_dic, "r") as f:
+            caller.set_voc(json.load(f))
+    except Exception:
+        raise FileError(path_dic)
+    try:
+        with open(path_func_def, "r") as f:
+            try:
+                caller.set_functions(json.load(f))
+            except Exception:
+                raise JSONError('Not a json file', path_func_def)
+    except Exception:
+        raise FileError(path_func_def)
+    try:
+        with open(path_prompts, "r") as f:
+            for ask in json.load(f):
+                for value in ask.values():
+                    prompts.append(value)
+    except Exception:
+        raise FileError(path_prompts)
     for i, prompt in enumerate(prompts):
         caller.ask_llm(prompt, model)
-    with open(path_output, 'w') as f:
-        json.dump(caller.get_answer(), f, indent=1)
+    try:
+        with open(path_output, 'w') as f:
+            json.dump(caller.get_answer(), f, indent=2)
+    except Exception:
+        raise FileError(path_output)
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except (Exception) as e:
+        print(e)

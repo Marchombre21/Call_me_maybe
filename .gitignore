@@ -14,3 +14,6 @@ wheels/
 .uv_cache/
 
 data/
+input/
+output/
+.json

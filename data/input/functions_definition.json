@@ -13,7 +13,7 @@
     "returns": {
       "type": "number"
     }
-  },
+  }
   {
     "name": "fn_greet",
     "description": "Generate a greeting message for a person by name.",

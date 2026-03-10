@@ -3,29 +3,30 @@ PYTHON := $(VENV)/bin/python3
 POETRY := $(VENV)/bin/poetry
 PIP := $(VENV)/bin/pip
 UV := uv
+SRC := src
+PROG := __main__.py
 
-# help:
-# 	@echo "Available commands:"
-# 	@echo "  make install     - Install dependencies"
-# 	@echo "  make run         - Run the application"
-# 	@echo "  make test        - Run tests"
-# 	@echo "  make clean       - Clean temporary files"
-# 	@echo "  make debug       - Run the application in debug mode"
-# 	@echo "  make lint        - Run linters and type checkers"
-# 	@echo "  make lint-strict - Run linters and type checkers in strict mode"
-# 	@echo "  make keybind     - Show available keybinds while running the program"
+help:
+	@echo "Available commands:"
+	@echo "  make install     - Install dependencies"
+	@echo "  make run         - Run the application"
+	@echo "  make test        - Run tests"
+	@echo "  make clean       - Clean temporary files"
+	@echo "  make debug       - Run the application in debug mode"
+	@echo "  make lint        - Run linters and type checkers"
+	@echo "  make lint-strict - Run linters and type checkers in strict mode"
 
 install:
 	@$(UV) sync
 
 run:
-	@$(UV) run python3 -m src\
-	--functions_definition data/input/functions_definition.json\
-	--input data/input/function_calling_tests.json\
+	@$(UV) run $(PYTHON) -m $(SRC) \
+	--functions_definition data/input/functions_definition.json \
+	--input data/input/function_calling_tests.json \
 	--output data/output/function_calls.json
 
 debug:
-	$(PYTHON) -m pdb src.call_me_maybe
+	$(PYTHON) -m pdb $(SRC)/$(PROG)
 
 test:
 	$(PYTHON) -m pytest -v
