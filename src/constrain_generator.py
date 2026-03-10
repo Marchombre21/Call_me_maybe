@@ -141,10 +141,8 @@ class FunctionCalling():
     def init_autor_tokens(self):
         self.__param_authorized_tokens = []
         if self.__futurs_params[1] == 'string':
-            for key, value in self.__voc.items():
-                if ('"' not in key or key == '"') and\
-                    (',' not in key or key == ','):
-                    self.__param_authorized_tokens.append(value)
+            for value in self.__voc.items():
+                self.__param_authorized_tokens.append(value)
         if self.__futurs_params[1] == 'number':
             if len(self.__futurs_params) >= 4:
                 pattern: Pattern = re.compile(r'^([-0-9.,]+|}}|})$')
