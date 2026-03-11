@@ -10,11 +10,11 @@
 #                                                                             #
 # ****************************************************************************#
 
+from llm_sdk import Small_LLM_Model
 from .utils import check_last_token_param, value_by_token
-from .errors import UnknownCharacterError
 
 
-def add_string(string: str, tokens_list: list[int], voc: dict):
+def add_string(string: str, tokens_list: list[int], model: Small_LLM_Model):
     """Add a string to the prompt to the LLM after changing it to its token
     format.
 
@@ -24,12 +24,8 @@ def add_string(string: str, tokens_list: list[int], voc: dict):
     Raises:
         UnknownCharacterError: If the model doesn't know the asked letter.
     """
-    for letter in string:
-        token: int = voc.get(letter)
-        if token:
-            tokens_list.append(token)
-        else:
-            raise UnknownCharacterError(letter)
+    for token in model.encode(string).tolist()[0]:
+        tokens_list.append(token)
 
 
 def add_token_one(token: int, tokens_list: list[int], voc: dict,

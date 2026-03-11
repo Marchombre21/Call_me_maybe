@@ -11,7 +11,7 @@
 # ****************************************************************************#
 
 import json
-from .errors import FormatError, UnknownCharacterError
+from .errors import FormatError
 from llm_sdk import Small_LLM_Model
 
 
@@ -30,7 +30,7 @@ def init_dict(prompt: str, final_dict: list[dict]) -> None:
         raise FormatError('Request must be a string.')
 
 
-def init_name(tokens_list: list[int], voc: dict):
+def init_name(tokens_list: list[int], model: Small_LLM_Model):
     """Format the prompt to the LLM when I ask for the function name.
 
     Args:
@@ -39,15 +39,11 @@ def init_name(tokens_list: list[int], voc: dict):
     Raises:
         UnknownCharacterError: If the model doesn't know the asked letter.
     """
-    for letter in '"name":"':
-        token: int = voc.get(letter)
-        if token:
-            tokens_list.append(token)
-        else:
-            raise UnknownCharacterError(letter)
+    for token in model.encode('"name": "').tolist()[0]:
+        tokens_list.append(token)
 
 
-def init_parameters(tokens_list: list[int], voc: dict):
+def init_parameters(tokens_list: list[int], model: Small_LLM_Model):
     """Format the prompt to the LLM when I ask for the function parameters.
 
     Args:
@@ -56,12 +52,8 @@ def init_parameters(tokens_list: list[int], voc: dict):
     Raises:
         UnknownCharacterError: If the model doesn't know the asked letter.
     """
-    for letter in '"parameters":{':
-        token: int = voc.get(letter)
-        if token:
-            tokens_list.append(token)
-        else:
-            raise UnknownCharacterError(letter)
+    for token in model.encode('"parameters": {').tolist()[0]:
+        tokens_list.append(token)
 
 
 def param_question_one(prompt: str, model: Small_LLM_Model,
