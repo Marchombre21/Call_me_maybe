@@ -25,6 +25,8 @@ def add_string(string: str, tokens_list: list[int], voc: dict):
         UnknownCharacterError: If the model doesn't know the asked letter.
     """
     for letter in string:
+        if letter == ' ':
+            letter = 'Ġ'
         token: int = voc.get(letter)
         if token:
             tokens_list.append(token)

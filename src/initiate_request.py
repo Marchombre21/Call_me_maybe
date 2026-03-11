@@ -39,7 +39,7 @@ def init_name(tokens_list: list[int], voc: dict):
     Raises:
         UnknownCharacterError: If the model doesn't know the asked letter.
     """
-    for letter in '"name":"':
+    for letter in '"name":Ġ"':
         token: int = voc.get(letter)
         if token:
             tokens_list.append(token)
@@ -56,7 +56,7 @@ def init_parameters(tokens_list: list[int], voc: dict):
     Raises:
         UnknownCharacterError: If the model doesn't know the asked letter.
     """
-    for letter in '"parameters":{':
+    for letter in '"parameters":Ġ{':
         token: int = voc.get(letter)
         if token:
             tokens_list.append(token)
@@ -95,11 +95,13 @@ def param_question_two(prompt: str, model: Small_LLM_Model,
     # We retrieve the previously chosen function name.
     func_name: str = "".join(model.decode(chosen_func))
     func_dic: dict = [
-        func for func in func_dict
-        if func.get('name') == func_name
+        func for func in func_dict if func.get('name') == func_name
     ][0]
 
-    tokens = model.encode(f'Task:{prompt}\n{json.dumps(func_dic)}\n'
-                          'JSON: {').tolist()[0]
+    tokens = model.encode(
+        f'Task: Extract exact parameter values from the'
+        f' request.\nRequest: {prompt}\n'
+        f'{json.dumps(func_dic)}\n'
+        'JSON: {').tolist()[0]
 
     return tokens

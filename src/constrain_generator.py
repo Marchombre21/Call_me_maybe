@@ -10,7 +10,7 @@
 #                                                                             #
 # ****************************************************************************#
 
-from re import Pattern, compile
+from re import Pattern, compile, sub
 from .model import FunctionModel
 from .initiate_request import (
     init_dict,
@@ -104,10 +104,10 @@ class FunctionCalling(BaseModel):
                     self.__futurs_params.append(key)
                     self.__futurs_params.append(value.get('type', 'any'))
                 if self.__futurs_params[1] == 'string':
-                    add_string('"' + self.__futurs_params[0] + '":"',
+                    add_string('"' + self.__futurs_params[0] + '": "',
                                self.__request_tokens, self.__voc)
                 else:
-                    add_string('"' + self.__futurs_params[0] + '":',
+                    add_string('"' + self.__futurs_params[0] + '": ',
                                self.__request_tokens, self.__voc)
 
     def init_autor_tokens(self):
@@ -136,6 +136,9 @@ class FunctionCalling(BaseModel):
         """
         self.__step = 1
         self.__chosen_func = []
+
+        # If there are floats with comma insted of dot the LLM is lost
+        prompt = sub(r'(\d),(\d)', r'\1.\2', prompt)
 
         # We configure the prompt to switch to LLM.
         tokens: list[int] = param_question_one(prompt, model,
@@ -196,10 +199,10 @@ class FunctionCalling(BaseModel):
                 # We add tokens to the request depending on the next
                 # parameter's type.
                 if self.__futurs_params[1] == 'string':
-                    add_string('"' + self.__futurs_params[0] + '":"',
+                    add_string('"' + self.__futurs_params[0] + '": "',
                                self.__request_tokens, self.__voc)
                 else:
-                    add_string('"' + self.__futurs_params[0] + '":',
+                    add_string('"' + self.__futurs_params[0] + '": ',
                                self.__request_tokens, self.__voc)
                 logits = model.get_logits_from_input_ids(self.__request_tokens)
                 chosen_token = handle_logits(logits, self.__param_valid_tokens)
