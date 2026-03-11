@@ -12,7 +12,7 @@
 
 class FileError(Exception):
     def __init__(self, path: str = None, details: str = None):
-        message: str = f'A problem occured with {path} path.\n'
+        message: str = f'A problem occured with {path}.\n'
         if details:
             message += details
         super().__init__(message)
@@ -21,3 +21,19 @@ class FileError(Exception):
 class JSONError(FileError):
     def __init__(self, details: str, path: str):
         super().__init__(path, details)
+
+
+class FormatError(Exception):
+    def __init__(self, message: str):
+        super().__init__(message)
+
+
+class UnknownCharacterError(Exception):
+    def __init__(self, letter: str):
+        message: str = f'The \'{letter}\' is not used in this model.'
+        super().__init__(message)
+
+
+class MissingParameters(Exception):
+    def __init__(self, *args):
+        super().__init__(*args)

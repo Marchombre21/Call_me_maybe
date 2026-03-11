@@ -1,9 +1,6 @@
-from .model import TestModel, ValidationError
 from .constrain_generator import FunctionCalling
 
 __all__ = [
-    "TestModel",
-    "ValidationError",
     "FunctionCalling"
     ]
 

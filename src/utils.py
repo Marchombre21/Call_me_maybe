@@ -18,6 +18,18 @@ def value_by_token(token: int, voc: dict) -> str | None:
 
 
 def check_last_token(type: str, token: int, voc: dict) -> int:
+    """Check whether the LLM used a last token that includes characters after
+    the final character.
+
+    Args:
+        type (str): Type of the parameter
+        token (int): The last token
+        voc (dict): Dict of all vocabulary
+
+    Returns:
+        int: The new token that represents from the first character to the
+        closing character.
+    """
     if type == 'string':
         stop: str = '"'
     else:
@@ -36,6 +48,18 @@ def check_last_token(type: str, token: int, voc: dict) -> int:
 
 
 def check_last_token_param(type: str, token: int, voc: dict) -> int | None:
+    """Check whether the LLM used a last token that includes characters before
+    the final character.
+
+    Args:
+        type (str): Type of the parameter
+        token (int): The last token
+        voc (dict): Dict of all vocabulary
+
+    Returns:
+        int | None: The new token just for the characters before the final one
+        or None if the final one is at first position.
+    """
     if type == 'string':
         stop: str = '"'
     else:
@@ -65,6 +89,9 @@ def add_parameters(dicts: list[dict], prompt: str, key: str, value: str) ->\
     for dict in dicts:
         if dict.get('prompt') == prompt:
             if dict.get('parameters') is None:
-                dict.update({'parameters': {key: value}})
+                if not key or not value:
+                    dict.update({'parameters': 'No need'})
+                else:
+                    dict.update({'parameters': {key: value}})
             else:
                 dict.get('parameters').update({key: value})

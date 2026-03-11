@@ -11,10 +11,11 @@
 # ****************************************************************************#
 
 import json
+from json import JSONDecodeError
 from argparse import ArgumentParser, Namespace
 from src import FunctionCalling
 from llm_sdk import Small_LLM_Model
-from .errors import FileError, JSONError
+from .errors import FileError, JSONError, FormatError
 # from src import TestModel, ValidationError
 
 
@@ -39,40 +40,66 @@ def main() -> None:
         "data/input/function_calling_tests.json"
     path_output: str = args.output if args.output else\
         "data/output/function_calls.json"
+
+    # Class instantiation
     caller: FunctionCalling = FunctionCalling()
     prompts: list[str] = []
 
+    # Attempt to recover vocabulary
     try:
         with open(path_dic, "r") as f:
             caller.set_voc(json.load(f))
-    except Exception:
-        raise FileError(path_dic)
+    except (FileNotFoundError, PermissionError, IsADirectoryError, TypeError)\
+            as e:
+        raise FileError(path_dic, str(e))
+
+    # Attempt to recover the function definitions
     try:
         with open(path_func_def, "r") as f:
             try:
                 caller.set_functions(json.load(f))
-            except Exception:
-                raise JSONError('Not a json file', path_func_def)
-    except Exception:
-        raise FileError(path_func_def)
+            except JSONDecodeError as e:
+                raise JSONError(str(e), path_func_def)
+    except (FileNotFoundError, PermissionError, IsADirectoryError, TypeError)\
+            as e:
+        raise FileError(path_func_def, str(e))
+
+    # Attempt to recover requests
     try:
         with open(path_prompts, "r") as f:
-            for ask in json.load(f):
-                for value in ask.values():
-                    prompts.append(value)
-    except Exception:
-        raise FileError(path_prompts)
-    for i, prompt in enumerate(prompts):
-        caller.ask_llm(prompt, model)
+            try:
+                for ask in json.load(f):
+                    if not isinstance(ask, dict):
+                        raise FormatError('Requests must be in dict format.')
+                    for value in ask.values():
+                        if isinstance(value, str):
+                            prompts.append(value)
+                        else:
+                            raise FormatError('The requests must be strings.')
+            except JSONDecodeError as e:
+                raise JSONError(str(e), path_prompts)
+    except (FileNotFoundError, PermissionError, IsADirectoryError, TypeError)\
+            as e:
+        raise FileError(path_dic, str(e))
+
+    # We ask the questions to the llm one after the other.
+    for prompt in prompts:
+        caller.ask_llm(prompt.replace('"', "'"), model)
+
+    # Attempt to write the result in a file in JSON format
     try:
         with open(path_output, 'w') as f:
-            json.dump(caller.get_answer(), f, indent=2)
-    except Exception:
-        raise FileError(path_output)
+            try:
+                json.dump(caller.get_answer(), f, indent=2)
+            except JSONDecodeError as e:
+                raise JSONError(str(e), path_output)
+    except (FileNotFoundError, PermissionError, IsADirectoryError, TypeError)\
+            as e:
+        raise FileError(path_dic, str(e))
 
 
 if __name__ == "__main__":
-    try:
-        main()
-    except (Exception) as e:
-        print(e)
+    # try:
+    main()
+    # except (Exception) as e:
+    #     print(e)
