@@ -14,13 +14,11 @@ import numpy as np
 
 
 def handle_logits(logits: list[float], valid_tokens: list[int]) -> int:
-    """_summary_
-
-    Args:
-        logits (list[float]): _description_
+    """Applies a mask to the logit table to add -infinity to the logits of
+    unauthorized tokens.
 
     Returns:
-        int: _description_
+        int: The position of the biggest logit.
     """
     logits_np: list[float] = np.array(logits)
     mask: list[bool] = np.ones(len(logits_np), dtype=bool)
