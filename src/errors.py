@@ -32,8 +32,3 @@ class UnknownCharacterError(Exception):
     def __init__(self, letter: str):
         message: str = f'The \'{letter}\' is not used in this model.'
         super().__init__(message)
-
-
-class MissingParameters(Exception):
-    def __init__(self, *args):
-        super().__init__(*args)

@@ -1,7 +1,5 @@
 VENV := .venv
 PYTHON := $(VENV)/bin/python3
-POETRY := $(VENV)/bin/poetry
-PIP := $(VENV)/bin/pip
 UV := uv
 SRC := src
 PROG := __main__.py
@@ -28,12 +26,8 @@ run:
 debug:
 	$(PYTHON) -m pdb $(SRC)/$(PROG)
 
-test:
-	$(PYTHON) -m pytest -v
-
 clean:
 	find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
-	find . -type d -name ".pytest_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type d -name ".mypy_cache" -exec rm -rf {} + 2>/dev/null || true
 	find . -type f -name "*.pyc" -delete
 
