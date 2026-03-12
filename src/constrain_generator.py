@@ -127,7 +127,7 @@ class FunctionCalling(BaseModel):
         if self.__futurs_params[1] == 'string':
             for value in self.__voc.values():
                 self.__param_valid_tokens.append(value)
-        if self.__futurs_params[1] == 'number':
+        if self.__futurs_params[1] in ['number', 'integer']:
             if len(self.__futurs_params) >= 4:
                 pattern: Pattern[str] = compile(r'^([-0-9.,]+|}}|})$')
             else:

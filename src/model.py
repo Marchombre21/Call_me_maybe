@@ -38,8 +38,8 @@ class FunctionModel(BaseModel):
                 if key_p != 'type':
                     raise FormatError('The key of the dict of parameter value'
                                       ' must be "type".')
-                if value_p not in ['number', 'string']:
+                if value_p not in ['number', 'string', 'integer']:
                     raise FormatError('The value of the type parameter in'
-                                      ' function dict must be either "number"'
-                                      ' or "string".')
+                                      ' function dict must be either "number",'
+                                      ' "integer" or "string".')
         return value

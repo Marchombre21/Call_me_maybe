@@ -70,7 +70,8 @@ def add_token_two(token: int, tokens_list: list[int], futurs_params: list[str],
         new_token: int | None = check_last_token_param('string', token, voc)
         if new_token:
             chosen_param.append(new_token)
-    elif (type_p == 'number' and stop in value_by_token(token, voc)):
+    elif (type_p in ['number', 'integer']
+          and stop in value_by_token(token, voc)):
         new_token = check_last_token_param('number', token, voc)
         if new_token:
             chosen_param.append(new_token)

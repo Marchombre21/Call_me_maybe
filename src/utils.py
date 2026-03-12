@@ -95,12 +95,15 @@ def add_parameters(dicts: list[dict[str, str | dict[str, str | int | float]]],
                    value: str | int | float | None) -> None:
     parameters_dict: str | dict[str, str | int
                                 | float] | None = dicts[-1].get('parameters')
-    if type == 'number' and value and isinstance(value, str):
+    if type in ['number', 'integer'] and value and isinstance(value, str):
         try:
             if '.' in value:
                 value = float(value)
             else:
-                value = int(value)
+                if type == 'number':
+                    value = float(value + '.0')
+                else:
+                    value = int(value)
         except ValueError:
             raise TypeError(str(value))
     else:
