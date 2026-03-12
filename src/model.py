@@ -17,12 +17,13 @@ from .errors import FormatError
 class FunctionModel(BaseModel):
     name: str = Field(pattern=r'^[a-z_"]+$')
     description: str = Field(min_length=15)
-    parameters: dict | None = Field(None)
-    returns: dict | None = Field(None)
+    parameters: dict[str, dict[str, str]] | None = Field(None)
+    returns: dict[str, str] | None = Field(None)
 
     @field_validator('parameters', mode='after')
     @classmethod
-    def check_parameters(cls, value: dict | None):
+    def check_parameters(
+            cls, value: dict[str, str] | None) -> dict[str, str] | None:
         if value is None:
             return value
         for key, value_d in value.items():

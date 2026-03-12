@@ -18,10 +18,7 @@ install:
 	@$(UV) sync
 
 run:
-	@$(UV) run $(PYTHON) -m $(SRC) \
-	--functions_definition data/input/functions_definition.json \
-	--input data/input/function_calling_tests.json \
-	--output data/output/function_calls.json
+	@$(UV) run $(PYTHON) -m $(SRC)
 
 debug:
 	$(PYTHON) -m pdb $(SRC)/$(PROG)
@@ -35,8 +32,8 @@ clean-all: clean
 	rm -rf $(VENV)
 
 lint:
-	python3 -m flake8 .
-	python3 -m mypy . \
+	$(UV) run $(PYTHON) -m flake8 src/*.py
+	$(UV) run $(PYTHON) -m mypy src/*.py \
 	--warn-return-any \
 	--warn-unused-ignores \
 	--ignore-missing-imports \
@@ -44,7 +41,7 @@ lint:
 	--check-untyped-defs \
 
 lint-strict:
-	python3 -m flake8 .
-	python3 -m mypy . --strict
+	$(UV) run $(PYTHON) -m flake8 src/*.py
+	$(UV) run $(PYTHON) -m mypy src/*.py --strict
 
 .PHONY: help install run test clean debug lint lint-strict

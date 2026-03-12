@@ -12,5 +12,6 @@ wheels/
 #caches
 .hf_cache/
 .uv_cache/
+.mypy_cache
 
 data/

@@ -11,39 +11,36 @@
 # ****************************************************************************#
 
 from re import Pattern, compile, sub
+from typing import cast
 from .model import FunctionModel
-from .initiate_request import (
-    init_dict,
-    init_name,
-    init_parameters,
-    param_question_one,
-    param_question_two
-)
+from .initiate_request import (init_dict, init_name, init_parameters,
+                               param_question_one, param_question_two)
 from .add_functions import add_string, add_token_one, add_token_two
 from .errors import FormatError
 from .handle_logit import handle_logits
 from pydantic import BaseModel, PrivateAttr
-from llm_sdk import Small_LLM_Model
-from .utils import (value_by_token,
-                    check_last_token,
-                    add_name,
-                    add_parameters)
+from llm_sdk import Small_LLM_Model  # type: ignore[attr-defined]
+from .utils import (value_by_token, check_last_token, add_name, add_parameters)
 
 
 class FunctionCalling(BaseModel):
 
-    __final_dicts: list[dict] = PrivateAttr(default_factory=list)
+    __final_dicts: list[dict[str, str | dict[str, str]]] = PrivateAttr(
+        default_factory=list)
     __request_tokens: list[int] = PrivateAttr(default_factory=list)
     __name_valid_token: list[int] = PrivateAttr(default_factory=list)
     __param_valid_tokens: list[int] = PrivateAttr(default_factory=list)
     __chosen_func: list[int] = PrivateAttr(default_factory=list)
     __chosen_param: list[int] = PrivateAttr(default_factory=list)
     __futurs_params: list[str] = PrivateAttr(default_factory=list)
-    __voc: dict = PrivateAttr(default_factory=dict)
+    __voc: dict[str, int] = PrivateAttr(default_factory=dict)
     __step: int = PrivateAttr(default=1)
-    __functions_dict: list[dict] = PrivateAttr(default_factory=list)
+    __functions_dict: list[dict[str, str
+                                | dict[str,
+                                       str | dict[str, str]]]] = PrivateAttr(
+                                           default_factory=list)
 
-    def set_voc(self, voc_dict: dict):
+    def set_voc(self, voc_dict: dict[str, int]) -> None:
         """Store the dict returned by json.load containing the llm vocabulary
         (key) associated with their token value (value).
         'r': Prevents the interpreter from treating '\' as standard escape
@@ -56,12 +53,15 @@ class FunctionCalling(BaseModel):
         if isinstance(voc_dict, dict):
             self.__voc = voc_dict
             if len(self.__name_valid_token) == 0:
-                pattern: Pattern = compile(r'^[a-z_"]+$')
+                pattern: Pattern[str] = compile(r'^[a-z_"]+$')
                 for token_str, token_value in self.__voc.items():
                     if pattern.match(token_str):
                         self.__name_valid_token.append(token_value)
 
-    def set_functions(self, func_dict: list[dict]) -> None:
+    def set_functions(
+        self,
+        func_dict: list[dict[str, str
+                             | dict[str, str | dict[str, str]]]]) -> None:
         """Store the list of functions dict in the instance variable.
 
         Args:
@@ -96,7 +96,9 @@ class FunctionCalling(BaseModel):
 
         if self.__step == 2:
             init_parameters(self.__request_tokens, self.__voc)
-            params: dict | None = self.search_params_type(model)
+            params: dict[str,
+                         dict[str,
+                              str]] | None = self.search_params_type(model)
             if not params:
                 add_parameters(self.__final_dicts, prompt, None, None)
             else:
@@ -110,7 +112,7 @@ class FunctionCalling(BaseModel):
                     add_string('"' + self.__futurs_params[0] + '": ',
                                self.__request_tokens, self.__voc)
 
-    def init_autor_tokens(self):
+    def init_autor_tokens(self) -> None:
         """Store the authorized tokens depending on the type of parameter
         searched for.
         """
@@ -120,7 +122,7 @@ class FunctionCalling(BaseModel):
                 self.__param_valid_tokens.append(value)
         if self.__futurs_params[1] == 'number':
             if len(self.__futurs_params) >= 4:
-                pattern: Pattern = compile(r'^([-0-9.,]+|}}|})$')
+                pattern: Pattern[str] = compile(r'^([-0-9.,]+|}}|})$')
             else:
                 pattern = compile(r'^([-0-9.]+|}}|})$')
             for token_str, token_value in self.__voc.items():
@@ -137,7 +139,7 @@ class FunctionCalling(BaseModel):
         self.__step = 1
         self.__chosen_func = []
 
-        # If there are floats with comma insted of dot the LLM is lost
+        # If there are floats with comma instead of dot the LLM is lost
         prompt = sub(r'(\d),(\d)', r'\1.\2', prompt)
 
         # We configure the prompt to switch to LLM.
@@ -163,8 +165,7 @@ class FunctionCalling(BaseModel):
             tokens = param_question_two(prompt, model, self.__functions_dict,
                                         self.__chosen_func)
             self._init_request(tokens, prompt, model)
-            logits: list[float] = model.get_logits_from_input_ids(
-                self.__request_tokens)
+            logits = model.get_logits_from_input_ids(self.__request_tokens)
             chosen_token = handle_logits(logits, self.__param_valid_tokens)
 
             # If there are more than 1 parameter, the waiting token (stop) will
@@ -185,8 +186,6 @@ class FunctionCalling(BaseModel):
                     add_token_two(chosen_token, self.__request_tokens,
                                   self.__futurs_params, self.__voc,
                                   self.__chosen_param)
-                    print(model.decode(self.__request_tokens))
-                    print()
 
                 # When we found the parameter, it's added to the final result.
                 param_str: str = "".join(model.decode(self.__chosen_param))
@@ -211,7 +210,7 @@ class FunctionCalling(BaseModel):
 
                 self.__chosen_param = []
                 if self.__futurs_params[1] == 'string':
-                    stop: str = '"'
+                    stop = '"'
                 else:
                     stop = '}'
                 self.init_autor_tokens()
@@ -224,27 +223,30 @@ class FunctionCalling(BaseModel):
                     add_token_two(chosen_token, self.__request_tokens,
                                   self.__futurs_params, self.__voc,
                                   self.__chosen_param)
-                    print(model.decode(self.__request_tokens))
 
-                param_str: str = "".join(model.decode(self.__chosen_param))
+                param_str = "".join(model.decode(self.__chosen_param))
                 add_parameters(self.__final_dicts, prompt,
                                self.__futurs_params[0], param_str)
 
                 self.__request_tokens[len(self.__request_tokens) - 1] =\
                     check_last_token(
                     self.__futurs_params[1], chosen_token, self.__voc)
-                print(model.decode(self.__request_tokens))
                 del self.__futurs_params[0:2]
 
-    def search_params_type(self, model: Small_LLM_Model) -> dict | None:
+    def search_params_type(
+            self, model: Small_LLM_Model) -> dict[str, dict[str, str]] | None:
         """Return the dict containing the parameters of the chosen function or
         None if there are none.
         """
         func_name: str = "".join(model.decode(self.__chosen_func))
-        return [
+        parameters_dict: str | dict[str, str | dict[str, str]] | None = [
             func.get('parameters') for func in self.__functions_dict
             if func.get('name') == func_name
         ][0]
+        if parameters_dict is None or isinstance(parameters_dict, dict):
+            return cast(dict[str, dict[str, str]] | None, parameters_dict)
+        else:
+            raise FormatError("Parameters can't be strings")
 
-    def get_answer(self) -> list[dict]:
+    def get_answer(self) -> list[dict[str, str | dict[str, str]]]:
         return self.__final_dicts

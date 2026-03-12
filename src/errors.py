@@ -11,7 +11,7 @@
 # ****************************************************************************#
 
 class FileError(Exception):
-    def __init__(self, path: str = None, details: str = None):
+    def __init__(self, path: str | None = None, details: str | None = None):
         message: str = f'A problem occured with {path}.\n'
         if details:
             message += details
@@ -31,4 +31,10 @@ class FormatError(Exception):
 class UnknownCharacterError(Exception):
     def __init__(self, letter: str):
         message: str = f'The \'{letter}\' is not used in this model.'
+        super().__init__(message)
+
+
+class UnknownTokenError(Exception):
+    def __init__(self, token: str):
+        message: str = f'The \'{token}\' token is not used in this model.'
         super().__init__(message)

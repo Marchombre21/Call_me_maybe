@@ -8,7 +8,9 @@ authors = [
 ]
 requires-python = ">=3.10"
 dependencies = [
+    "flake8>=7.3.0",
     "llm-sdk",
+    "mypy>=1.19.1",
     "numpy>=2.2.6",
     "pydantic>=2.12.5",
     "pytest>=9.0.2",

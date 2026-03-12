@@ -14,9 +14,8 @@ import json
 from json import JSONDecodeError
 from argparse import ArgumentParser, Namespace
 from src import FunctionCalling
-from llm_sdk import Small_LLM_Model
+from llm_sdk import Small_LLM_Model  # type: ignore[attr-defined]
 from .errors import FileError, JSONError, FormatError
-# from src import TestModel, ValidationError
 
 
 def main() -> None:
@@ -40,7 +39,7 @@ def main() -> None:
     path_prompts: str = args.input if args.input else\
         "data/input/function_calling_tests.json"
     path_output: str = args.output if args.output else\
-        "data/output/function_calls.json"
+        "data/output/function_calling_results.json"
 
     # Class instantiation
     caller: FunctionCalling = FunctionCalling()
@@ -85,7 +84,8 @@ def main() -> None:
         raise FileError(path_dic, str(e))
 
     # We ask the questions to the llm one after the other.
-    for prompt in prompts:
+    for i, prompt in enumerate(prompts):
+        print(f"Work in progress : {i}/{len(prompts)}. Please wait.")
         caller.ask_llm(prompt.replace('"', "'"), model)
 
     # Attempt to write the result in a file in JSON format
@@ -98,6 +98,7 @@ def main() -> None:
     except (FileNotFoundError, PermissionError, IsADirectoryError, TypeError)\
             as e:
         raise FileError(path_dic, str(e))
+    print("All requests have been processed. Thank you for waiting!")
 
 
 if __name__ == "__main__":

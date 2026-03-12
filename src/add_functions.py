@@ -14,7 +14,8 @@ from .utils import check_last_token_param, value_by_token
 from .errors import UnknownCharacterError
 
 
-def add_string(string: str, tokens_list: list[int], voc: dict):
+def add_string(string: str, tokens_list: list[int], voc: dict[str,
+                                                              int]) -> None:
     """Add a string to the prompt to the LLM after changing it to its token
     format.
 
@@ -27,15 +28,15 @@ def add_string(string: str, tokens_list: list[int], voc: dict):
     for letter in string:
         if letter == ' ':
             letter = 'Ġ'
-        token: int = voc.get(letter)
+        token: int | None = voc.get(letter)
         if token:
             tokens_list.append(token)
         else:
             raise UnknownCharacterError(letter)
 
 
-def add_token_one(token: int, tokens_list: list[int], voc: dict,
-                  chosen_func: list[int]):
+def add_token_one(token: int, tokens_list: list[int], voc: dict[str, int],
+                  chosen_func: list[int]) -> None:
     """Add token to the prompt to the LLM.
 
     Args:
@@ -50,7 +51,7 @@ def add_token_one(token: int, tokens_list: list[int], voc: dict,
 
 
 def add_token_two(token: int, tokens_list: list[int], futurs_params: list[str],
-                  voc: dict, chosen_param: list[int]):
+                  voc: dict[str, int], chosen_param: list[int]) -> None:
 
     tokens_list.append(token)
 
@@ -70,7 +71,7 @@ def add_token_two(token: int, tokens_list: list[int], futurs_params: list[str],
         if new_token:
             chosen_param.append(new_token)
     elif (type_p == 'number' and stop in value_by_token(token, voc)):
-        new_token: int | None = check_last_token_param('number', token, voc)
+        new_token = check_last_token_param('number', token, voc)
         if new_token:
             chosen_param.append(new_token)
     else:

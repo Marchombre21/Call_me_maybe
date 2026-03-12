@@ -11,6 +11,7 @@
 # ****************************************************************************#
 
 import numpy as np
+from numpy.typing import NDArray
 
 
 def handle_logits(logits: list[float], valid_tokens: list[int]) -> int:
@@ -20,8 +21,8 @@ def handle_logits(logits: list[float], valid_tokens: list[int]) -> int:
     Returns:
         int: The position of the biggest logit.
     """
-    logits_np: list[float] = np.array(logits)
-    mask: list[bool] = np.ones(len(logits_np), dtype=bool)
+    logits_np: NDArray[np.float64] = np.array(logits)
+    mask: NDArray[np.bool_] = np.ones(len(logits_np), dtype=bool)
 
     mask[valid_tokens] = False
 
