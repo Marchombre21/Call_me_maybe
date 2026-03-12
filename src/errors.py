@@ -38,3 +38,9 @@ class UnknownTokenError(Exception):
     def __init__(self, token: str):
         message: str = f'The \'{token}\' token is not used in this model.'
         super().__init__(message)
+
+
+class TypeError(Exception):
+    def __init__(self, string: str):
+        message: str = f'{string} should be a integer.'
+        super().__init__(message)

@@ -25,8 +25,9 @@ from .utils import (value_by_token, check_last_token, add_name, add_parameters)
 
 class FunctionCalling(BaseModel):
 
-    __final_dicts: list[dict[str, str | dict[str, str]]] = PrivateAttr(
-        default_factory=list)
+    __final_dicts: list[dict[str, str
+                             | dict[str, str | int | float]]] = PrivateAttr(
+                                 default_factory=list)
     __request_tokens: list[int] = PrivateAttr(default_factory=list)
     __name_valid_token: list[int] = PrivateAttr(default_factory=list)
     __param_valid_tokens: list[int] = PrivateAttr(default_factory=list)
@@ -35,10 +36,10 @@ class FunctionCalling(BaseModel):
     __futurs_params: list[str] = PrivateAttr(default_factory=list)
     __voc: dict[str, int] = PrivateAttr(default_factory=dict)
     __step: int = PrivateAttr(default=1)
-    __functions_dict: list[dict[str, str
-                                | dict[str,
-                                       str | dict[str, str]]]] = PrivateAttr(
-                                           default_factory=list)
+    __functions_dict: list[dict[
+        str, str
+        | dict[str, str | dict[str, str]]]] = PrivateAttr(
+            default_factory=list)
 
     def set_voc(self, voc_dict: dict[str, int]) -> None:
         """Store the dict returned by json.load containing the llm vocabulary
@@ -61,7 +62,8 @@ class FunctionCalling(BaseModel):
     def set_functions(
         self,
         func_dict: list[dict[str, str
-                             | dict[str, str | dict[str, str]]]]) -> None:
+                             | dict[str, str | dict[str, str]]]]
+    ) -> None:
         """Store the list of functions dict in the instance variable.
 
         Args:
@@ -71,9 +73,13 @@ class FunctionCalling(BaseModel):
             FormatError: If the arg hasn't a list of dict format.
         """
         if isinstance(func_dict, list):
-            for dict_f in func_dict:
-                FunctionModel.model_validate(dict_f)
-            self.__functions_dict = func_dict
+            if (len(func_dict) > 0):
+                for dict_f in func_dict:
+                    FunctionModel.model_validate(dict_f)
+                self.__functions_dict = func_dict
+            else:
+                raise FormatError(
+                    'There must be at least one function in the JSON file.')
         else:
             raise FormatError('Functions list is not in list type')
 
@@ -100,7 +106,8 @@ class FunctionCalling(BaseModel):
                          dict[str,
                               str]] | None = self.search_params_type(model)
             if not params:
-                add_parameters(self.__final_dicts, prompt, None, None)
+                add_parameters(self.__final_dicts, self.__futurs_params[1],
+                               None, None)
             else:
                 for key, value in params.items():
                     self.__futurs_params.append(key)
@@ -157,7 +164,7 @@ class FunctionCalling(BaseModel):
                 add_token_one(chosen_token, self.__request_tokens, self.__voc,
                               self.__chosen_func)
             func_name: str = "".join(model.decode(self.__chosen_func))
-            add_name(self.__final_dicts, prompt, func_name)
+            add_name(self.__final_dicts, func_name)
             self.__step = 2
 
         # Step 2 is the parameters research
@@ -189,7 +196,7 @@ class FunctionCalling(BaseModel):
 
                 # When we found the parameter, it's added to the final result.
                 param_str: str = "".join(model.decode(self.__chosen_param))
-                add_parameters(self.__final_dicts, prompt,
+                add_parameters(self.__final_dicts, self.__futurs_params[1],
                                self.__futurs_params[0], param_str)
 
                 # We can delete the parameter found and its type
@@ -225,7 +232,7 @@ class FunctionCalling(BaseModel):
                                   self.__chosen_param)
 
                 param_str = "".join(model.decode(self.__chosen_param))
-                add_parameters(self.__final_dicts, prompt,
+                add_parameters(self.__final_dicts, self.__futurs_params[1],
                                self.__futurs_params[0], param_str)
 
                 self.__request_tokens[len(self.__request_tokens) - 1] =\
@@ -239,14 +246,18 @@ class FunctionCalling(BaseModel):
         None if there are none.
         """
         func_name: str = "".join(model.decode(self.__chosen_func))
-        parameters_dict: str | dict[str, str | dict[str, str]] | None = [
-            func.get('parameters') for func in self.__functions_dict
-            if func.get('name') == func_name
-        ][0]
+        parameters_dict: str | dict[str, str
+                                    | dict[str, str]] | None = [
+                                        func.get('parameters')
+                                        for func in self.__functions_dict
+                                        if func.get('name') == func_name
+                                    ][0]
         if parameters_dict is None or isinstance(parameters_dict, dict):
             return cast(dict[str, dict[str, str]] | None, parameters_dict)
         else:
-            raise FormatError("Parameters can't be strings")
+            raise FormatError("Parameters must be a dictionnary with 'type' as"
+                              " key.")
 
-    def get_answer(self) -> list[dict[str, str | dict[str, str]]]:
+    def get_answer(
+            self) -> list[dict[str, str | dict[str, str | int | float]]]:
         return self.__final_dicts

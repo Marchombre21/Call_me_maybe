@@ -15,8 +15,10 @@ from .errors import FormatError, UnknownCharacterError
 from llm_sdk import Small_LLM_Model  # type: ignore[attr-defined]
 
 
-def init_dict(prompt: str,
-              final_dict: list[dict[str, str | dict[str, str]]]) -> None:
+def init_dict(
+        prompt: str,
+        final_dict: list[dict[str,
+                              str | dict[str, str | int | float]]]) -> None:
     """Create the dictionnary for this request.
 
     Args:
@@ -76,7 +78,7 @@ def param_question_one(
     functions: str = ""
 
     # We retrieve the names and descriptions of each function.
-    functions_list: list[dict[str, str]] = [{
+    functions_list: list[dict[str, str | int | float]] = [{
         "name":
         str(f.get('name', 'Unknown name')),
         "description":

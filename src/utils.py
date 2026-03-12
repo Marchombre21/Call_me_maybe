@@ -10,7 +10,7 @@
 #                                                                             #
 # ****************************************************************************#
 
-from .errors import UnknownTokenError, UnknownCharacterError
+from .errors import UnknownTokenError, UnknownCharacterError, TypeError
 
 
 def value_by_token(token: int, voc: dict[str, int]) -> str:
@@ -85,24 +85,30 @@ def check_last_token_param(type: str, token: int,
         return None
 
 
-def add_name(dicts: list[dict[str, str | dict[str, str]]], prompt: str,
+def add_name(dicts: list[dict[str, str | dict[str, str | int | float]]],
              name: str) -> None:
-    for dictionnary in dicts:
-        if dictionnary.get('prompt') == prompt:
-            dictionnary.update({'name': name})
-            break
+    dicts[-1].update({'name': name})
 
 
-def add_parameters(dicts: list[dict[str, str | dict[str, str]]],
-                   prompt: str, key: str | None, value: str | None) -> None:
-    for dictionnary in dicts:
-        if dictionnary.get('prompt') == prompt:
-            parameters_dict: str | dict[str, str] | None =\
-                dictionnary.get('parameters')
-            if parameters_dict is None:
-                if not key or not value:
-                    dictionnary.update({'parameters': 'No need'})
-                else:
-                    dictionnary.update({'parameters': {key: value}})
-            elif isinstance(parameters_dict, dict):
-                parameters_dict.update({str(key): str(value)})
+def add_parameters(dicts: list[dict[str, str | dict[str, str | int | float]]],
+                   type: str, key: str | None,
+                   value: str | int | float | None) -> None:
+    parameters_dict: str | dict[str, str | int
+                                | float] | None = dicts[-1].get('parameters')
+    if type == 'number' and value and isinstance(value, str):
+        try:
+            if '.' in value:
+                value = float(value)
+            else:
+                value = int(value)
+        except ValueError:
+            raise TypeError(str(value))
+    else:
+        value = str(value)
+    if parameters_dict is None:
+        if not key or not value:
+            dicts[-1].update({'parameters': 'No need'})
+        else:
+            dicts[-1].update({'parameters': {key: value}})
+    elif isinstance(parameters_dict, dict):
+        parameters_dict.update({str(key): value})

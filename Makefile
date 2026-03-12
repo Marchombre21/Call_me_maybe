@@ -20,6 +20,11 @@ install:
 run:
 	@$(UV) run $(PYTHON) -m $(SRC)
 
+runm:
+	@$(UV) run $(PYTHON) -m $(SRC) \
+	--functions_definition data2/input/functions_definition.json \
+	--input data2/input/function_calling_tests.json \
+
 debug:
 	$(PYTHON) -m pdb $(SRC)/$(PROG)
 
