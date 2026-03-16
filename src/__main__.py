@@ -12,6 +12,7 @@
 
 import json
 from json import JSONDecodeError
+from pydantic import ValidationError
 from argparse import ArgumentParser, Namespace
 from src import FunctionCalling
 from llm_sdk import Small_LLM_Model  # type: ignore[attr-defined]
@@ -104,5 +105,8 @@ def main() -> None:
 if __name__ == "__main__":
     try:
         main()
+    except (ValidationError) as e:
+        for error in e.errors():
+            print(f"{error.get('loc')[0]}: {error.get('msg')}")
     except (Exception) as e:
         print(e)
